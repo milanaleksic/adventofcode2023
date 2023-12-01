@@ -1,0 +1,18 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "zig-debug",
+            "type": "lldb",
+            "console": "externalTerminal",
+            "request": "launch",
+            "program": "${workspaceFolder}/zig-out/bin/adventofcode2023",
+            "args": [
+                "1", 
+                "${workspaceFolder}/data/input-1-1.txt"
+            ],
+            "cwd": "${workspaceFolder}",
+            "preLaunchTask": "build"
+        },
+    ]
+}
