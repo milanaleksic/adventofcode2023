@@ -15,3 +15,12 @@ pub fn openFile(inputFile: []const u8, list: *std.ArrayList([]const u8)) !void {
         try list.append(buf2);
     }
 }
+
+pub fn parseToListOfStrings(comptime T: type, input: T) !std.ArrayList(T) {
+    var list = std.ArrayList(T).init(std.testing.allocator);
+    var iter = std.mem.split(u8, input, "\n");
+    while (iter.next()) |line| {
+        try list.append(line);
+    }
+    return list;
+}

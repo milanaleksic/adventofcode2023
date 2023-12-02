@@ -20,15 +20,15 @@ pub fn main() !void {
     switch (day) {
         1 => {
             switch (part) {
-                1 => std.debug.print("Answer is {d}\n", .{try day1.firstDay1(list)}),
-                2 => std.debug.print("Answer is {d}\n", .{try day1.firstDay2(list)}),
+                1 => std.debug.print("Answer is {d}\n", .{try day1.part1(list)}),
+                2 => std.debug.print("Answer is {d}\n", .{try day1.part2(list)}),
                 else => std.debug.print("Unknown / not ready implementation for part {d}\n", .{part}),
             }
         },
         2 => {
             switch (part) {
-                1 => std.debug.print("Answer is {d}\n", .{try day2.secondDay1(list)}),
-                2 => std.debug.print("Answer is {d}\n", .{try day2.secondDay2(list)}),
+                1 => std.debug.print("Answer is {d}\n", .{try day2.part1(list)}),
+                2 => std.debug.print("Answer is {d}\n", .{try day2.part2(list)}),
                 else => std.debug.print("Unknown / not ready implementation for part {d}\n", .{part}),
             }
         },
