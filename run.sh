@@ -9,3 +9,4 @@ export SCRIPT_DIR
 
 $SCRIPT_DIR/zig-out/bin/adventofcode2023 1 1 data/input-1-1.txt
 $SCRIPT_DIR/zig-out/bin/adventofcode2023 1 2 data/input-1-1.txt
+$SCRIPT_DIR/zig-out/bin/adventofcode2023 2 1 data/input-2-1.txt
