@@ -12,9 +12,9 @@ pub fn part1(list: std.ArrayList([]const u8)) !i64 {
     var sum: i64 = 0;
     for (list.items) |line| {
         // print("line={s}\n", .{line});
-        var forbid = false;
         if (mem.indexOf(u8, line, ":")) |indexOfColon| {
             if (mem.indexOf(u8, line, " ")) |indexOfSpace| {
+                var forbid = false;
                 // print("indexOfColon={d}, indexOfSpace={d}, game={d}\n", .{ indexOfColon, indexOfSpace, game });
                 // print("game={s}\n", .{line[indexOfSpace + 1 .. indexOfColon]});
                 const game = try parseInt(i32, line[indexOfSpace + 1 .. indexOfColon], 10);
@@ -83,51 +83,46 @@ pub fn part2(list: std.ArrayList([]const u8)) !usize {
     var sum: usize = 0;
     for (list.items) |line| {
         // print("line={s}\n", .{line});
-        var minRed: usize = 0;
-        var minGreen: usize = 0;
-        var minBlue: usize = 0;
         if (mem.indexOf(u8, line, ":")) |indexOfColon| {
-            if (mem.indexOf(u8, line, " ")) |indexOfSpace| {
-                // print("indexOfColon={d}, indexOfSpace={d}, game={d}\n", .{ indexOfColon, indexOfSpace, game });
-                // print("game={s}\n", .{line[indexOfSpace + 1 .. indexOfColon]});
-                const game = try parseInt(i32, line[indexOfSpace + 1 .. indexOfColon], 10);
-                _ = game;
-
-                var lastExtractBegin = indexOfColon + 2;
-                for (line[indexOfColon + 2 ..], indexOfColon + 2..) |char, i| {
-                    // print("char='{d}'\n", .{char});
-                    if (char == ',' or char == ';') {
-                        const next = try countsOnLine(line, lastExtractBegin, i);
-                        if (next[0] > minRed) {
-                            minRed = next[0];
-                        }
-                        if (next[1] > minGreen) {
-                            minGreen = next[1];
-                        }
-                        if (next[2] > minBlue) {
-                            minBlue = next[2];
-                        }
-                        lastExtractBegin = i + 2;
+            var minRed: usize = 0;
+            var minGreen: usize = 0;
+            var minBlue: usize = 0;
+            // print("indexOfColon={d}, indexOfSpace={d}, game={d}\n", .{ indexOfColon, indexOfSpace, game });
+            // print("game={s}\n", .{line[indexOfSpace + 1 .. indexOfColon]});
+            var lastExtractBegin = indexOfColon + 2;
+            for (line[indexOfColon + 2 ..], indexOfColon + 2..) |char, i| {
+                // print("char='{d}'\n", .{char});
+                if (char == ',' or char == ';') {
+                    const next = try countsOnLine(line, lastExtractBegin, i);
+                    if (next.red > minRed) {
+                        minRed = next.red;
                     }
+                    if (next.green > minGreen) {
+                        minGreen = next.green;
+                    }
+                    if (next.blue > minBlue) {
+                        minBlue = next.blue;
+                    }
+                    lastExtractBegin = i + 2;
                 }
-                const next = try countsOnLine(line, lastExtractBegin, line.len);
-                if (next[0] > minRed) {
-                    minRed = next[0];
-                }
-                if (next[1] > minGreen) {
-                    minGreen = next[1];
-                }
-                if (next[2] > minBlue) {
-                    minBlue = next[2];
-                }
-                sum += minRed * minGreen * minBlue;
             }
+            const next = try countsOnLine(line, lastExtractBegin, line.len);
+            if (next.red > minRed) {
+                minRed = next.red;
+            }
+            if (next.green > minGreen) {
+                minGreen = next.green;
+            }
+            if (next.blue > minBlue) {
+                minBlue = next.blue;
+            }
+            sum += minRed * minGreen * minBlue;
         }
     }
     return sum;
 }
 
-fn countsOnLine(line: []const u8, lastExtractBegin: usize, i: usize) !struct { usize, usize, usize } {
+fn countsOnLine(line: []const u8, lastExtractBegin: usize, i: usize) !struct { red: usize, green: usize, blue: usize } {
     const extract = line[lastExtractBegin..i];
     var countRed: usize = 0;
     var countGreen: usize = 0;
@@ -147,7 +142,7 @@ fn countsOnLine(line: []const u8, lastExtractBegin: usize, i: usize) !struct { u
             // print("color='{s}', count={d}\n", .{ color, count });
         }
     }
-    return .{ countRed, countGreen, countBlue };
+    return .{ .red = countRed, .green = countGreen, .blue = countBlue };
 }
 
 test "part 2" {

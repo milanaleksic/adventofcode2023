@@ -9,4 +9,4 @@ Using: zig v0.11.0
 - [x] stable naming of functions and tests
 - [x] multi-line test source instead of manual `append` calls
 - [ ] switch places for equals comparison in tests, figure out the comptime error cause
-- [ ] named structs as function results in day2
+- [x] named structs as function results in day2
