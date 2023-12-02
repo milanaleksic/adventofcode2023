@@ -37,6 +37,14 @@ test "part 1" {
     try std.testing.expect(142 == testValue);
 }
 
+test "part 1 full" {
+    var data = try util.openFile(std.testing.allocator, "data/input-1-1.txt");
+    defer data.deinit();
+
+    const testValue: i64 = try part1(data.lines);
+    try std.testing.expectEqual(testValue, 55208);
+}
+
 pub fn part2(list: std.ArrayList([]const u8)) !usize {
     const words = [9][]const u8{ "one", "two", "three", "four", "five", "six", "seven", "eight", "nine" };
     var sum: usize = 0;
@@ -86,4 +94,12 @@ test "part 2" {
 
     const testValue: usize = try part2(list);
     try std.testing.expectEqual(testValue, 281);
+}
+
+test "part 2 full" {
+    var data = try util.openFile(std.testing.allocator, "data/input-1-1.txt");
+    defer data.deinit();
+
+    const testValue: usize = try part2(data.lines);
+    try std.testing.expectEqual(testValue, 54578);
 }

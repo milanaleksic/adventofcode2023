@@ -1,8 +1,30 @@
 const std = @import("std");
 const fs = std.fs;
-const allocator = std.heap.page_allocator;
 
-pub fn openFile(inputFile: []const u8, list: *std.ArrayList([]const u8)) !void {
+const FileData = struct {
+    const Self = @This();
+    lines: std.ArrayList([]const u8),
+
+    pub fn init(allocator: std.mem.Allocator) Self {
+        return Self{
+            .lines = std.ArrayList([]const u8).init(allocator),
+        };
+    }
+
+    pub fn append(self: *Self, line: []const u8) !void {
+        try self.lines.append(line);
+    }
+
+    pub fn deinit(self: *Self) void {
+        for (self.lines.items) |line| {
+            self.lines.allocator.free(line);
+        }
+        self.lines.deinit();
+    }
+};
+
+pub fn openFile(allocator: std.mem.Allocator, inputFile: []const u8) !FileData {
+    var list = FileData.init(allocator);
     var file = try fs.cwd().openFile(inputFile, .{});
     defer file.close();
 
@@ -14,6 +36,7 @@ pub fn openFile(inputFile: []const u8, list: *std.ArrayList([]const u8)) !void {
         const buf2 = try allocator.dupe(u8, line);
         try list.append(buf2);
     }
+    return list;
 }
 
 pub fn parseToListOfStrings(comptime T: type, input: T) !std.ArrayList(T) {

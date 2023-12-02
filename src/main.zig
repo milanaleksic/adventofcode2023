@@ -13,22 +13,21 @@ pub fn main() !void {
     const inputFile: []const u8 = args.next() orelse "undefined";
     std.debug.print("Advent of Code 2023 by milan@aleksic.dev: running day {d}, part {d}, input file={s}\n", .{ day, part, inputFile });
 
-    var list = std.ArrayList([]const u8).init(allocator);
-    defer list.deinit();
+    var data = try util.openFile(allocator, inputFile);
+    defer data.deinit();
 
-    try util.openFile(inputFile, &list);
     switch (day) {
         1 => {
             switch (part) {
-                1 => std.debug.print("Answer is {d}\n", .{try day1.part1(list)}),
-                2 => std.debug.print("Answer is {d}\n", .{try day1.part2(list)}),
+                1 => std.debug.print("Answer is {d}\n", .{try day1.part1(data.lines)}),
+                2 => std.debug.print("Answer is {d}\n", .{try day1.part2(data.lines)}),
                 else => std.debug.print("Unknown / not ready implementation for part {d}\n", .{part}),
             }
         },
         2 => {
             switch (part) {
-                1 => std.debug.print("Answer is {d}\n", .{try day2.part1(list)}),
-                2 => std.debug.print("Answer is {d}\n", .{try day2.part2(list)}),
+                1 => std.debug.print("Answer is {d}\n", .{try day2.part1(data.lines)}),
+                2 => std.debug.print("Answer is {d}\n", .{try day2.part2(data.lines)}),
                 else => std.debug.print("Unknown / not ready implementation for part {d}\n", .{part}),
             }
         },

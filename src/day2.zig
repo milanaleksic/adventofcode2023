@@ -23,17 +23,11 @@ pub fn part1(list: std.ArrayList([]const u8)) !i64 {
                 for (line[indexOfColon + 2 ..], indexOfColon + 2..) |char, i| {
                     // print("char='{d}'\n", .{char});
                     if (char == ',' or char == ';') {
-                        const next = try forbidOnLine(line, lastExtractBegin, i);
-                        if (next[0]) {
-                            forbid = true;
-                        }
-                        lastExtractBegin = next[1];
+                        forbid = forbid or try forbidOnLine(line, lastExtractBegin, i);
+                        lastExtractBegin = i + 2;
                     }
                 }
-                const next = try forbidOnLine(line, lastExtractBegin, line.len);
-                if (next[0]) {
-                    forbid = true;
-                }
+                forbid = forbid or try forbidOnLine(line, lastExtractBegin, line.len);
                 if (!forbid) {
                     sum += game;
                 }
@@ -43,25 +37,24 @@ pub fn part1(list: std.ArrayList([]const u8)) !i64 {
     return sum;
 }
 
-fn forbidOnLine(line: []const u8, lastExtractBegin: usize, i: usize) !struct { bool, usize } {
+fn forbidOnLine(line: []const u8, lastExtractBegin: usize, i: usize) !bool {
     const extract = line[lastExtractBegin..i];
-    var lineShouldBeForbidden = false;
     // print("extract='{s}'\n", .{extract});
     var split = mem.split(u8, extract, " ");
     if (split.next()) |number| {
         const count = try parseInt(i32, number, 10);
         if (split.next()) |color| {
             if (mem.eql(u8, color, "red") and count > allowedRed) {
-                lineShouldBeForbidden = true;
+                return true;
             } else if (mem.eql(u8, color, "green") and count > allowedGreen) {
-                lineShouldBeForbidden = true;
+                return true;
             } else if (mem.eql(u8, color, "blue") and count > allowedBlue) {
-                lineShouldBeForbidden = true;
+                return true;
             }
             // print("color='{s}', count={d}\n", .{ color, count });
         }
     }
-    return .{ lineShouldBeForbidden, i + 2 };
+    return false;
 }
 
 test "part 1" {
@@ -76,6 +69,14 @@ test "part 1" {
 
     const testValue: i64 = try part1(list);
     try std.testing.expectEqual(testValue, 8);
+}
+
+test "part 1 full" {
+    var data = try util.openFile(std.testing.allocator, "data/input-2-1.txt");
+    defer data.deinit();
+
+    const testValue: i64 = try part1(data.lines);
+    try std.testing.expectEqual(testValue, 3035);
 }
 
 pub fn part2(list: std.ArrayList([]const u8)) !usize {
@@ -106,7 +107,7 @@ pub fn part2(list: std.ArrayList([]const u8)) !usize {
                         if (next[2] > minBlue) {
                             minBlue = next[2];
                         }
-                        lastExtractBegin = next[3];
+                        lastExtractBegin = i + 2;
                     }
                 }
                 const next = try countsOnLine(line, lastExtractBegin, line.len);
@@ -126,7 +127,7 @@ pub fn part2(list: std.ArrayList([]const u8)) !usize {
     return sum;
 }
 
-fn countsOnLine(line: []const u8, lastExtractBegin: usize, i: usize) !struct { usize, usize, usize, usize } {
+fn countsOnLine(line: []const u8, lastExtractBegin: usize, i: usize) !struct { usize, usize, usize } {
     const extract = line[lastExtractBegin..i];
     var countRed: usize = 0;
     var countGreen: usize = 0;
@@ -146,7 +147,7 @@ fn countsOnLine(line: []const u8, lastExtractBegin: usize, i: usize) !struct { u
             // print("color='{s}', count={d}\n", .{ color, count });
         }
     }
-    return .{ countRed, countGreen, countBlue, i + 2 };
+    return .{ countRed, countGreen, countBlue };
 }
 
 test "part 2" {
@@ -161,4 +162,12 @@ test "part 2" {
 
     const testValue: usize = try part2(list);
     try std.testing.expectEqual(testValue, 2286);
+}
+
+test "part 2 full" {
+    var data = try util.openFile(std.testing.allocator, "data/input-2-1.txt");
+    defer data.deinit();
+
+    const testValue: usize = try part2(data.lines);
+    try std.testing.expectEqual(testValue, 66027);
 }
