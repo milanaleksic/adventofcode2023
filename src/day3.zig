@@ -2,12 +2,7 @@ const std = @import("std");
 const util = @import("util.zig");
 const mem = std.mem;
 const print = std.debug.print;
-const parseInt = std.fmt.parseInt;
 const allocator = std.heap.page_allocator;
-
-const allowedRed = 12;
-const allowedGreen = 13;
-const allowedBlue = 14;
 
 pub fn part1(list: std.ArrayList([]const u8)) !i64 {
     var sum: i64 = 0;
@@ -33,9 +28,9 @@ pub fn part1(list: std.ArrayList([]const u8)) !i64 {
     while (y < rows) {
         while (x < cols) {
             const c = data[y][x];
-            if (isDigit(c)) {
+            if (util.isDigit(c)) {
                 const beginDigit = x;
-                while (isDigit(data[y][x])) {
+                while (util.isDigit(data[y][x])) {
                     x += 1;
                     if (x == cols) {
                         break;
@@ -53,9 +48,9 @@ pub fn part1(list: std.ArrayList([]const u8)) !i64 {
                 outside: for (beginY..endY) |yi| {
                     for (beginX..endX) |xi| {
                         // print("looking at x={d} y={d}, data={c}\n", .{ xi, yi, data[yi][xi] });
-                        if (isSymbol(data[yi][xi])) {
+                        if (util.isSymbol(data[yi][xi])) {
                             // print("parsing '{s}'\n", .{data[y][beginDigit..endDigit]});
-                            const number = try parseInt(i64, data[y][beginDigit..endDigit], 10);
+                            const number = try util.toI64(data[y][beginDigit..endDigit]);
                             // print("{d}\n", .{number});
                             sum += number;
                             break :outside;
@@ -70,23 +65,6 @@ pub fn part1(list: std.ArrayList([]const u8)) !i64 {
     }
 
     return sum;
-}
-
-fn isDigit(c: u8) bool {
-    return (c >= '0' and c <= '9');
-}
-
-fn isSymbol(c: u8) bool {
-    return (c < '0' or c > '9') and (c != '.') and (c != '\n');
-}
-
-fn printMatrix(data: [][]u8) void {
-    for (data) |line| {
-        for (line) |c| {
-            print("{c}", .{c});
-        }
-        print("\n", .{});
-    }
 }
 
 test "part 1 test 1" {
@@ -209,9 +187,9 @@ pub fn part2(list: std.ArrayList([]const u8)) !i64 {
     while (y < rows) {
         while (x < cols) {
             const c = data[y][x];
-            if (isDigit(c)) {
+            if (util.isDigit(c)) {
                 const beginDigit = x;
-                while (isDigit(data[y][x])) {
+                while (util.isDigit(data[y][x])) {
                     x += 1;
                     if (x == cols) {
                         break;
@@ -227,7 +205,7 @@ pub fn part2(list: std.ArrayList([]const u8)) !i64 {
                 for (beginY..endY) |yi| {
                     for (beginX..endX) |xi| {
                         if (isGear(data[yi][xi])) {
-                            const number = try parseInt(i64, data[y][beginDigit..endDigit], 10);
+                            const number = try util.toI64(data[y][beginDigit..endDigit]);
                             const key = [2]usize{ yi, xi };
                             var existingOptional: ?Part = mapOfNumbersByGearCoordinate.get(key);
                             if (existingOptional) |existing| {
@@ -271,7 +249,7 @@ fn isGear(c: u8) bool {
     return c == '*';
 }
 
-test "part 2 test" {
+test "part 2 test 1" {
     var list = try util.parseToListOfStrings([]const u8,
         \\467..114..
         \\...*......

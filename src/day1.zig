@@ -2,7 +2,6 @@ const std = @import("std");
 const util = @import("util.zig");
 const mem = std.mem;
 const print = std.debug.print;
-const parseInt = std.fmt.parseInt;
 
 pub fn part1(list: std.ArrayList([]const u8)) !i64 {
     var sum: i64 = 0;
@@ -11,7 +10,7 @@ pub fn part1(list: std.ArrayList([]const u8)) !i64 {
         var firstChar: u8 = 0;
         var secondChar: u8 = 0;
         for (line) |char| {
-            if (char >= '0' and char <= '9') {
+            if (util.isDigit(char)) {
                 if (firstChar == 0) {
                     firstChar = char;
                 }
@@ -53,7 +52,7 @@ pub fn part2(list: std.ArrayList([]const u8)) !usize {
         var firstChar: usize = 0;
         var secondChar: usize = 0;
         for (line, 0..) |char, i| {
-            if (char >= '0' and char <= '9') {
+            if (util.isDigit(char)) {
                 if (firstChar == 0) {
                     firstChar = char - @as(i8, '0');
                 }

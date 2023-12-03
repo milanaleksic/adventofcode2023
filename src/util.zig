@@ -47,3 +47,24 @@ pub fn parseToListOfStrings(comptime T: type, input: T) !std.ArrayList(T) {
     }
     return list;
 }
+
+pub fn isDigit(c: u8) bool {
+    return (c >= '0' and c <= '9');
+}
+
+pub fn isSymbol(c: u8) bool {
+    return (c < '0' or c > '9') and (c != '.') and (c != '\n');
+}
+
+pub fn printMatrix(data: [][]u8) void {
+    for (data) |line| {
+        for (line) |c| {
+            std.debug.print("{c}", .{c});
+        }
+        std.debug.print("\n", .{});
+    }
+}
+
+pub fn toI64(str: []const u8) !i64 {
+    return try std.fmt.parseInt(i64, str, 10);
+}

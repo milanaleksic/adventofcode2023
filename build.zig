@@ -38,6 +38,7 @@ pub fn build(b: *std.Build) !void {
 
         if (include_file) {
             const run_unit_tests = b.addRunArtifact(b.addTest(.{
+                .name = entry.path,
                 .root_source_file = .{ .path = b.pathJoin(&.{ "src", entry.path }) },
                 .target = target,
                 .optimize = optimize,

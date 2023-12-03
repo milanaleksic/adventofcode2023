@@ -2,7 +2,6 @@ const std = @import("std");
 const util = @import("util.zig");
 const mem = std.mem;
 const print = std.debug.print;
-const parseInt = std.fmt.parseInt;
 
 const allowedRed = 12;
 const allowedGreen = 13;
@@ -17,7 +16,7 @@ pub fn part1(list: std.ArrayList([]const u8)) !i64 {
                 var forbid = false;
                 // print("indexOfColon={d}, indexOfSpace={d}, game={d}\n", .{ indexOfColon, indexOfSpace, game });
                 // print("game={s}\n", .{line[indexOfSpace + 1 .. indexOfColon]});
-                const game = try parseInt(i32, line[indexOfSpace + 1 .. indexOfColon], 10);
+                const game = try util.toI64(line[indexOfSpace + 1 .. indexOfColon]);
 
                 var lastExtractBegin = indexOfColon + 2;
                 for (line[indexOfColon + 2 ..], indexOfColon + 2..) |char, i| {
@@ -42,7 +41,7 @@ fn forbidOnLine(line: []const u8, lastExtractBegin: usize, i: usize) !bool {
     // print("extract='{s}'\n", .{extract});
     var split = mem.split(u8, extract, " ");
     if (split.next()) |number| {
-        const count = try parseInt(i32, number, 10);
+        const count = try util.toI64(number);
         if (split.next()) |color| {
             if (mem.eql(u8, color, "red") and count > allowedRed) {
                 return true;
@@ -79,14 +78,14 @@ test "part 1 full" {
     try std.testing.expectEqual(testValue, 3035);
 }
 
-pub fn part2(list: std.ArrayList([]const u8)) !usize {
-    var sum: usize = 0;
+pub fn part2(list: std.ArrayList([]const u8)) !i64 {
+    var sum: i64 = 0;
     for (list.items) |line| {
         // print("line={s}\n", .{line});
         if (mem.indexOf(u8, line, ":")) |indexOfColon| {
-            var minRed: usize = 0;
-            var minGreen: usize = 0;
-            var minBlue: usize = 0;
+            var minRed: i64 = 0;
+            var minGreen: i64 = 0;
+            var minBlue: i64 = 0;
             // print("indexOfColon={d}, indexOfSpace={d}, game={d}\n", .{ indexOfColon, indexOfSpace, game });
             // print("game={s}\n", .{line[indexOfSpace + 1 .. indexOfColon]});
             var lastExtractBegin = indexOfColon + 2;
@@ -122,15 +121,15 @@ pub fn part2(list: std.ArrayList([]const u8)) !usize {
     return sum;
 }
 
-fn countsOnLine(line: []const u8, lastExtractBegin: usize, i: usize) !struct { red: usize, green: usize, blue: usize } {
+fn countsOnLine(line: []const u8, lastExtractBegin: usize, i: usize) !struct { red: i64, green: i64, blue: i64 } {
     const extract = line[lastExtractBegin..i];
-    var countRed: usize = 0;
-    var countGreen: usize = 0;
-    var countBlue: usize = 0;
+    var countRed: i64 = 0;
+    var countGreen: i64 = 0;
+    var countBlue: i64 = 0;
     // print("extract='{s}'\n", .{extract});
     var split = mem.split(u8, extract, " ");
     if (split.next()) |number| {
-        const count = try parseInt(usize, number, 10);
+        const count = try util.toI64(number);
         if (split.next()) |color| {
             if (mem.eql(u8, color, "red")) {
                 countRed = count;
@@ -155,7 +154,7 @@ test "part 2" {
     );
     defer list.deinit();
 
-    const testValue: usize = try part2(list);
+    const testValue: i64 = try part2(list);
     try std.testing.expectEqual(testValue, 2286);
 }
 
@@ -163,6 +162,6 @@ test "part 2 full" {
     var data = try util.openFile(std.testing.allocator, "data/input-2-1.txt");
     defer data.deinit();
 
-    const testValue: usize = try part2(data.lines);
+    const testValue: i64 = try part2(data.lines);
     try std.testing.expectEqual(testValue, 66027);
 }
