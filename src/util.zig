@@ -1,6 +1,40 @@
 const std = @import("std");
 const fs = std.fs;
 
+pub const InputMatrix = struct {
+    const Self = @This();
+    data: [][]u8,
+    allocator: std.mem.Allocator,
+
+    pub fn init(allocator: std.mem.Allocator, list: std.ArrayList([]const u8)) !Self {
+        const cols = list.items[0].len;
+        const rows = list.items.len;
+        var data: [][]u8 = try allocator.alloc([]u8, rows);
+        for (list.items, 0..) |line, row| {
+            data[row] = try allocator.alloc(u8, cols);
+            for (line, 0..) |c, col| {
+                data[row][col] = c;
+            }
+        }
+        return Self{ .data = data, .allocator = allocator };
+    }
+
+    pub fn rowCount(self: *Self) usize {
+        return self.data.len;
+    }
+
+    pub fn colCount(self: *Self) usize {
+        return self.data[0].len;
+    }
+
+    pub fn deinit(self: *Self) void {
+        for (self.data) |line| {
+            self.allocator.free(line);
+        }
+        self.allocator.free(self.data);
+    }
+};
+
 const FileData = struct {
     const Self = @This();
     lines: std.ArrayList([]const u8),

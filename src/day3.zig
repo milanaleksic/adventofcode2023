@@ -6,33 +6,20 @@ const allocator = std.heap.page_allocator;
 
 pub fn part1(list: std.ArrayList([]const u8)) !i64 {
     var sum: i64 = 0;
-    const cols = list.items[0].len;
-    const rows = list.items.len;
-    var data: [][]u8 = try allocator.alloc([]u8, rows);
-    for (list.items, 0..) |line, row| {
-        // print("\nline={s}", .{line});
-        data[row] = try allocator.alloc(u8, cols);
-        for (line, 0..) |c, col| {
-            data[row][col] = c;
-        }
-    }
-    defer {
-        for (data) |line| {
-            allocator.free(line);
-        }
-        allocator.free(data);
-    }
+    var matrix = try util.InputMatrix.init(allocator, list);
+    defer matrix.deinit();
+    var data = matrix.data;
 
     var x: usize = 0;
     var y: usize = 0;
-    while (y < rows) {
-        while (x < cols) {
+    while (y < matrix.rowCount()) {
+        while (x < matrix.colCount()) {
             const c = data[y][x];
             if (util.isDigit(c)) {
                 const beginDigit = x;
                 while (util.isDigit(data[y][x])) {
                     x += 1;
-                    if (x == cols) {
+                    if (x == matrix.colCount()) {
                         break;
                     }
                 }
@@ -40,9 +27,9 @@ pub fn part1(list: std.ArrayList([]const u8)) !i64 {
                 // print("beginDigit={d}, endDigit={d}\n", .{ beginDigit, endDigit });
 
                 const beginX = if (beginDigit == 0) 0 else beginDigit - 1;
-                const endX = if (endDigit >= cols - 1) cols else endDigit + 1;
+                const endX = if (endDigit >= matrix.colCount() - 1) matrix.colCount() else endDigit + 1;
                 const beginY = if (y == 0) y else y - 1;
-                const endY = if (y >= rows - 1) rows else y + 2;
+                const endY = if (y >= matrix.rowCount() - 1) matrix.rowCount() else y + 2;
 
                 // print("looking between x={d}..{d} and y={d}..{d}\n", .{ beginX, endX, beginY, endY });
                 outside: for (beginY..endY) |yi| {
@@ -165,42 +152,29 @@ pub fn part2(list: std.ArrayList([]const u8)) !i64 {
     var mapOfNumbersByGearCoordinate = std.AutoHashMap([2]usize, Part).init(allocator);
     defer mapOfNumbersByGearCoordinate.deinit();
 
-    const cols = list.items[0].len;
-    const rows = list.items.len;
-    var data: [][]u8 = try allocator.alloc([]u8, rows);
-    for (list.items, 0..) |line, row| {
-        // print("\nline={s}", .{line});
-        data[row] = try allocator.alloc(u8, cols);
-        for (line, 0..) |c, col| {
-            data[row][col] = c;
-        }
-    }
-    defer {
-        for (data) |line| {
-            allocator.free(line);
-        }
-        allocator.free(data);
-    }
+    var matrix = try util.InputMatrix.init(allocator, list);
+    defer matrix.deinit();
+    var data = matrix.data;
 
     var x: usize = 0;
     var y: usize = 0;
-    while (y < rows) {
-        while (x < cols) {
+    while (y < matrix.rowCount()) {
+        while (x < matrix.colCount()) {
             const c = data[y][x];
             if (util.isDigit(c)) {
                 const beginDigit = x;
                 while (util.isDigit(data[y][x])) {
                     x += 1;
-                    if (x == cols) {
+                    if (x == matrix.colCount()) {
                         break;
                     }
                 }
                 const endDigit = x;
 
                 const beginX = if (beginDigit == 0) 0 else beginDigit - 1;
-                const endX = if (endDigit >= cols - 1) cols else endDigit + 1;
+                const endX = if (endDigit >= matrix.colCount() - 1) matrix.colCount() else endDigit + 1;
                 const beginY = if (y == 0) y else y - 1;
-                const endY = if (y >= rows - 1) rows else y + 2;
+                const endY = if (y >= matrix.rowCount() - 1) matrix.rowCount() else y + 2;
 
                 for (beginY..endY) |yi| {
                     for (beginX..endX) |xi| {
