@@ -11,9 +11,9 @@
           with nixpkgs.legacyPackages.${system};
           mkShell {
             buildInputs = [
-				nixpkgs-unstable.legacyPackages.${system}.zig
-				nixpkgs-unstable.legacyPackages.${system}.zls
-				nixpkgs-unstable.legacyPackages.${system}.lldb
+              nixpkgs-unstable.legacyPackages.${system}.zig
+              nixpkgs-unstable.legacyPackages.${system}.zls
+              nixpkgs-unstable.legacyPackages.${system}.lldb
             ];
             shellHook = ''
               '';
