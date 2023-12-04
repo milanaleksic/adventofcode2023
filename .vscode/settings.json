@@ -1,0 +1,10 @@
+{
+    "files.exclude": {
+        "**/zig-cache": true,
+        "**/zig-out": true,
+        "**/.direnv": true,
+        "**/*.idea": true,
+        "**/*.*~": true,
+        "flake.lock": true,
+    }
+}
