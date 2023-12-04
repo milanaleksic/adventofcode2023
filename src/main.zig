@@ -4,6 +4,8 @@ const allocator = std.heap.page_allocator;
 const util = @import("util.zig");
 const day1 = @import("day1.zig");
 const day2 = @import("day2.zig");
+const day3 = @import("day3.zig");
+const day4 = @import("day4.zig");
 
 pub fn main() !void {
     var args = process.args();
@@ -28,6 +30,20 @@ pub fn main() !void {
             switch (part) {
                 1 => std.debug.print("Answer is {d}\n", .{try day2.part1(data.lines)}),
                 2 => std.debug.print("Answer is {d}\n", .{try day2.part2(data.lines)}),
+                else => std.debug.print("Unknown / not ready implementation for part {d}\n", .{part}),
+            }
+        },
+        3 => {
+            switch (part) {
+                1 => std.debug.print("Answer is {d}\n", .{try day3.part1(data.lines)}),
+                2 => std.debug.print("Answer is {d}\n", .{try day3.part2(data.lines)}),
+                else => std.debug.print("Unknown / not ready implementation for part {d}\n", .{part}),
+            }
+        },
+        4 => {
+            switch (part) {
+                1 => std.debug.print("Answer is {d}\n", .{try day4.part1(data.lines)}),
+                2 => std.debug.print("Answer is {d}\n", .{try day4.part2(data.lines)}),
                 else => std.debug.print("Unknown / not ready implementation for part {d}\n", .{part}),
             }
         },
