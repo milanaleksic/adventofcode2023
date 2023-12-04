@@ -73,9 +73,7 @@ test "part 1 full" {
     defer data.deinit();
 
     const testValue: i64 = try part1(data.lines);
-    // 513328 is too low
-    // 516161 is too high
-    try std.testing.expectEqual(testValue, 514969);
+    try std.testing.expectEqual(testValue, 27059);
 }
 
 pub fn part2(list: std.ArrayList([]const u8)) !i64 {
