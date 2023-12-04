@@ -1,10 +1,28 @@
-on: [push]
+name: Run all tests
+
+on:
+  push:
+    branches:
+      - 'master'
+    tags:
+      - '**'
+  pull_request:
+    types: [opened, synchronize, reopened]
+  workflow_dispatch:
+  schedule:
+    - cron:  '30 4 * * SAT'
+
 jobs:
   test:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
-      - uses: goto-bus-stop/setup-zig@v2
+      - name: Install Nix
+        uses: cachix/install-nix-action@v18
         with:
-          version: 0.11.0
-      - run: zig build test
+          extra_nix_config: |
+            access-tokens = github.com=${{ secrets.GITHUB_TOKEN }}
+      - uses: workflow/nix-shell-action@v3.3.0
+        with:
+          flakes-from-devshell: true
+          script: zig build test
