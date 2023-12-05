@@ -203,61 +203,40 @@ pub fn part2(list: std.ArrayList([]const u8)) !i64 {
         while (mapIter.next()) |entry| {
             var key = entry.key_ptr.*;
             if (entry.value_ptr.*) |newSourceRange| {
-                const offset: i64 = destinationStart - sourceStart;
-                if (newSourceRange.start >= sourceStart and newSourceRange.start <= sourceStart + range) {
-                    // print("Splitting range (1) {d}-{d} because of {d}-{d} (offset: {d})\n", .{ newSourceRange.start, @min(sourceStart + range, newSourceRange.end), sourceStart, sourceStart + range, offset });
-                    // print("  segment 1: {d}-{d} -> {d}-{d}\n", .{ newSourceRange.start, @min(sourceStart + range, newSourceRange.end), newSourceRange.start + offset, @min(sourceStart + range, newSourceRange.end) + offset });
-
-                    try newMapping.put(.{
-                        .start = newSourceRange.start,
-                        .end = @min(sourceStart + range, newSourceRange.end),
-                    }, .{
-                        .start = newSourceRange.start + offset,
-                        .end = @min(sourceStart + range, newSourceRange.end) + offset,
-                    });
-                    if (newSourceRange.end >= sourceStart + range + 1) {
-                        // print("  segment 2 (copy): {d}-{d}\n", .{ sourceStart + range + 1, newSourceRange.end });
-                        try mapping.put(.{
-                            .start = sourceStart + range + 1,
-                            .end = newSourceRange.end,
-                        }, .{
-                            .start = sourceStart + range + 1,
-                            .end = newSourceRange.end,
-                        });
-                    }
-                    try mapping.put(key, null);
-                } else if (newSourceRange.start <= sourceStart and newSourceRange.end >= sourceStart) {
-                    // print("Splitting range(2) {d}-{d} because of {d}-{d} (offset: {d})\n", .{ sourceStart, @min(sourceStart + range, newSourceRange.end), sourceStart, sourceStart + range, offset });
-                    // print("  segment 1: {d}-{d} -> {d}-{d}\n", .{ sourceStart, @min(sourceStart + range, newSourceRange.end), sourceStart + offset, @min(sourceStart + range, newSourceRange.end) + offset });
-                    try newMapping.put(.{
-                        .start = sourceStart,
-                        .end = @min(sourceStart + range, newSourceRange.end),
-                    }, .{
-                        .start = sourceStart + offset,
-                        .end = @min(sourceStart + range, newSourceRange.end) + offset,
-                    });
-                    if (sourceStart - 1 >= newSourceRange.start) {
-                        // print("  segment 2 (copy): {d}-{d}\n", .{ newSourceRange.start, sourceStart - 1 });
-                        try mapping.put(.{
-                            .start = newSourceRange.start,
-                            .end = sourceStart - 1,
-                        }, .{
-                            .start = newSourceRange.start,
-                            .end = sourceStart - 1,
-                        });
-                    }
-                    if (newSourceRange.end >= sourceStart + range + 1) {
-                        // print("  segment 3 (copy): {d}-{d}\n", .{ sourceStart + range + 1, newSourceRange.end });
-                        try mapping.put(.{
-                            .start = sourceStart + range + 1,
-                            .end = newSourceRange.end,
-                        }, .{
-                            .start = sourceStart + range + 1,
-                            .end = newSourceRange.end,
-                        });
-                    }
-                    try mapping.put(key, null);
+                if (newSourceRange.start > sourceStart + range or newSourceRange.end <= sourceStart) {
+                    continue;
                 }
+                const offset: i64 = destinationStart - sourceStart;
+                // print("Splitting range {d}-{d} because of {d}-{d} (offset: {d})\n", .{ sourceStart, @min(sourceStart + range, newSourceRange.end), sourceStart, sourceStart + range, offset });
+                // print("  segment 1: {d}-{d} -> {d}-{d}\n", .{ sourceStart, @min(sourceStart + range, newSourceRange.end), sourceStart + offset, @min(sourceStart + range, newSourceRange.end) + offset });
+                try newMapping.put(.{
+                    .start = @max(newSourceRange.start, sourceStart),
+                    .end = @min(sourceStart + range, newSourceRange.end),
+                }, .{
+                    .start = @max(newSourceRange.start, sourceStart) + offset,
+                    .end = @min(sourceStart + range, newSourceRange.end) + offset,
+                });
+                if (sourceStart - 1 >= newSourceRange.start) {
+                    // print("  segment 2 (copy): {d}-{d}\n", .{ newSourceRange.start, sourceStart - 1 });
+                    try mapping.put(.{
+                        .start = newSourceRange.start,
+                        .end = sourceStart - 1,
+                    }, .{
+                        .start = newSourceRange.start,
+                        .end = sourceStart - 1,
+                    });
+                }
+                if (newSourceRange.end >= sourceStart + range + 1) {
+                    // print("  segment 3 (copy): {d}-{d}\n", .{ sourceStart + range + 1, newSourceRange.end });
+                    try mapping.put(.{
+                        .start = sourceStart + range + 1,
+                        .end = newSourceRange.end,
+                    }, .{
+                        .start = sourceStart + range + 1,
+                        .end = newSourceRange.end,
+                    });
+                }
+                try mapping.put(key, null);
             }
         }
     }
