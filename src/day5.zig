@@ -189,7 +189,7 @@ pub fn part2(list: std.ArrayList([]const u8)) !i64 {
         }
         if (mem.endsWith(u8, line, "map:")) {
             try remapRange(&mapping, &newMapping);
-            printRangeMap(&mapping);
+            // printRangeMap(&mapping);
             newMapping.clearAndFree();
             continue;
         }
@@ -205,8 +205,8 @@ pub fn part2(list: std.ArrayList([]const u8)) !i64 {
             if (entry.value_ptr.*) |newSourceRange| {
                 const offset: i64 = destinationStart - sourceStart;
                 if (newSourceRange.start >= sourceStart and newSourceRange.start <= sourceStart + range) {
-                    print("Splitting range (1) {d}-{d} because of {d}-{d} (offset: {d})\n", .{ newSourceRange.start, @min(sourceStart + range, newSourceRange.end), sourceStart, sourceStart + range, offset });
-                    print("  segment 1: {d}-{d} -> {d}-{d}\n", .{ newSourceRange.start, @min(sourceStart + range, newSourceRange.end), newSourceRange.start + offset, @min(sourceStart + range, newSourceRange.end) + offset });
+                    // print("Splitting range (1) {d}-{d} because of {d}-{d} (offset: {d})\n", .{ newSourceRange.start, @min(sourceStart + range, newSourceRange.end), sourceStart, sourceStart + range, offset });
+                    // print("  segment 1: {d}-{d} -> {d}-{d}\n", .{ newSourceRange.start, @min(sourceStart + range, newSourceRange.end), newSourceRange.start + offset, @min(sourceStart + range, newSourceRange.end) + offset });
 
                     try newMapping.put(.{
                         .start = newSourceRange.start,
@@ -216,7 +216,7 @@ pub fn part2(list: std.ArrayList([]const u8)) !i64 {
                         .end = @min(sourceStart + range, newSourceRange.end) + offset,
                     });
                     if (newSourceRange.end >= sourceStart + range + 1) {
-                        print("  segment 2 (copy): {d}-{d}\n", .{ sourceStart + range + 1, newSourceRange.end });
+                        // print("  segment 2 (copy): {d}-{d}\n", .{ sourceStart + range + 1, newSourceRange.end });
                         try mapping.put(.{
                             .start = sourceStart + range + 1,
                             .end = newSourceRange.end,
@@ -227,8 +227,8 @@ pub fn part2(list: std.ArrayList([]const u8)) !i64 {
                     }
                     try mapping.put(key, null);
                 } else if (newSourceRange.start <= sourceStart and newSourceRange.end >= sourceStart) {
-                    print("Splitting range(2) {d}-{d} because of {d}-{d} (offset: {d})\n", .{ sourceStart, @min(sourceStart + range, newSourceRange.end), sourceStart, sourceStart + range, offset });
-                    print("  segment 1: {d}-{d} -> {d}-{d}\n", .{ sourceStart, @min(sourceStart + range, newSourceRange.end), sourceStart + offset, @min(sourceStart + range, newSourceRange.end) + offset });
+                    // print("Splitting range(2) {d}-{d} because of {d}-{d} (offset: {d})\n", .{ sourceStart, @min(sourceStart + range, newSourceRange.end), sourceStart, sourceStart + range, offset });
+                    // print("  segment 1: {d}-{d} -> {d}-{d}\n", .{ sourceStart, @min(sourceStart + range, newSourceRange.end), sourceStart + offset, @min(sourceStart + range, newSourceRange.end) + offset });
                     try newMapping.put(.{
                         .start = sourceStart,
                         .end = @min(sourceStart + range, newSourceRange.end),
@@ -237,7 +237,7 @@ pub fn part2(list: std.ArrayList([]const u8)) !i64 {
                         .end = @min(sourceStart + range, newSourceRange.end) + offset,
                     });
                     if (sourceStart - 1 >= newSourceRange.start) {
-                        print("  segment 2 (copy): {d}-{d}\n", .{ newSourceRange.start, sourceStart - 1 });
+                        // print("  segment 2 (copy): {d}-{d}\n", .{ newSourceRange.start, sourceStart - 1 });
                         try mapping.put(.{
                             .start = newSourceRange.start,
                             .end = sourceStart - 1,
@@ -247,7 +247,7 @@ pub fn part2(list: std.ArrayList([]const u8)) !i64 {
                         });
                     }
                     if (newSourceRange.end >= sourceStart + range + 1) {
-                        print("  segment 3 (copy): {d}-{d}\n", .{ sourceStart + range + 1, newSourceRange.end });
+                        // print("  segment 3 (copy): {d}-{d}\n", .{ sourceStart + range + 1, newSourceRange.end });
                         try mapping.put(.{
                             .start = sourceStart + range + 1,
                             .end = newSourceRange.end,
@@ -264,7 +264,7 @@ pub fn part2(list: std.ArrayList([]const u8)) !i64 {
 
     try remapRange(&mapping, &newMapping);
 
-    printRangeMap(&mapping);
+    // printRangeMap(&mapping);
 
     var min: ?Range = null;
     var minIter = mapping.iterator();
@@ -437,5 +437,5 @@ test "part 2 full" {
 
     const testValue: i64 = try part2(data.lines);
     // 638999091 is too high
-    try std.testing.expectEqual(testValue, -1);
+    try std.testing.expectEqual(testValue, 84206669);
 }
