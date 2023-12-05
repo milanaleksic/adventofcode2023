@@ -57,6 +57,5 @@ test "part 2 full" {
     defer data.deinit();
 
     const testValue: i64 = try part2(data.lines);
-    // 1361334 is too low
     try std.testing.expectEqual(testValue, 0);
 }
