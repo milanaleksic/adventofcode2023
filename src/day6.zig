@@ -2,9 +2,8 @@ const std = @import("std");
 const util = @import("util.zig");
 const mem = std.mem;
 const print = std.debug.print;
-const allocator = std.heap.page_allocator;
 
-pub fn part1(list: std.ArrayList([]const u8)) !i64 {
+pub fn part1(allocator: std.mem.Allocator, list: std.ArrayList([]const u8)) !i64 {
     var product: i64 = 1;
     var timesRaw = list.items[0];
     var distanceRaw = list.items[1];
@@ -12,7 +11,10 @@ pub fn part1(list: std.ArrayList([]const u8)) !i64 {
     _ = lineIter;
 
     var times: std.ArrayList(i64) = std.ArrayList(i64).init(allocator);
+    defer times.deinit();
+
     var distances: std.ArrayList(i64) = std.ArrayList(i64).init(allocator);
+    defer distances.deinit();
 
     var timeIter = mem.split(u8, timesRaw, " ");
     while (timeIter.next()) |timeIndividualRaw| {
@@ -34,7 +36,7 @@ pub fn part1(list: std.ArrayList([]const u8)) !i64 {
 
     for (times.items, 0..) |time, index| {
         var currentRecord = distances.items[index];
-        print("Looking at {d}/{d}\n", .{ time, currentRecord });
+        // print("Looking at {d}/{d}\n", .{ time, currentRecord });
 
         var numberOfBetterTimes: i64 = 0;
         for (0..@bitCast(time)) |buttonHoldPeriod| {
@@ -60,7 +62,7 @@ test "part 1 test 1" {
     );
     defer list.deinit();
 
-    const testValue: i64 = try part1(list);
+    const testValue: i64 = try part1(std.testing.allocator, list);
     try std.testing.expectEqual(testValue, 288);
 }
 
@@ -68,11 +70,11 @@ test "part 1 full" {
     var data = try util.openFile(std.testing.allocator, "data/input-6-1.txt");
     defer data.deinit();
 
-    const testValue: i64 = try part1(data.lines);
+    const testValue: i64 = try part1(std.testing.allocator, data.lines);
     try std.testing.expectEqual(testValue, 275724);
 }
 
-pub fn part2(list: std.ArrayList([]const u8)) !i64 {
+pub fn part2(allocator: std.mem.Allocator, list: std.ArrayList([]const u8)) !i64 {
     var timesRaw = list.items[0];
     var distanceRaw = list.items[1];
     var lineIter = mem.split(u8, timesRaw, " ");
@@ -87,7 +89,9 @@ pub fn part2(list: std.ArrayList([]const u8)) !i64 {
         if (time == -1) {
             continue;
         }
-        oneTimeString = try std.fmt.allocPrint(allocator, "{s}{s}", .{ oneTimeString, timeIndividualRaw });
+        var newOneTimeString = try std.fmt.allocPrint(allocator, "{s}{s}", .{ oneTimeString, timeIndividualRaw });
+        allocator.free(oneTimeString);
+        oneTimeString = newOneTimeString;
     }
     var oneTime: i64 = try util.toI64(oneTimeString);
 
@@ -100,7 +104,9 @@ pub fn part2(list: std.ArrayList([]const u8)) !i64 {
         if (time == -1) {
             continue;
         }
-        oneDistanceString = try std.fmt.allocPrint(allocator, "{s}{s}", .{ oneDistanceString, distanceIndividualRaw });
+        var newOneDistanceString = try std.fmt.allocPrint(allocator, "{s}{s}", .{ oneDistanceString, distanceIndividualRaw });
+        allocator.free(oneDistanceString);
+        oneDistanceString = newOneDistanceString;
     }
     var currentRecord: i64 = try util.toI64(oneDistanceString);
 
@@ -127,7 +133,7 @@ test "part 2 test 1" {
     );
     defer list.deinit();
 
-    const testValue: i64 = try part2(list);
+    const testValue: i64 = try part2(std.testing.allocator, list);
     try std.testing.expectEqual(testValue, 71503);
 }
 
@@ -135,6 +141,6 @@ test "part 2 full" {
     var data = try util.openFile(std.testing.allocator, "data/input-6-1.txt");
     defer data.deinit();
 
-    const testValue: i64 = try part2(data.lines);
+    const testValue: i64 = try part2(std.testing.allocator, data.lines);
     try std.testing.expectEqual(testValue, 37286485);
 }

@@ -2,9 +2,8 @@ const std = @import("std");
 const util = @import("util.zig");
 const mem = std.mem;
 const print = std.debug.print;
-const allocator = std.heap.page_allocator;
 
-pub fn part1(list: std.ArrayList([]const u8)) !i64 {
+pub fn part1(allocator: std.mem.Allocator, list: std.ArrayList([]const u8)) !i64 {
     var sum: i64 = 0;
     var myNumbers = std.AutoHashMap(i64, bool).init(allocator);
     defer myNumbers.deinit();
@@ -64,7 +63,7 @@ test "part 1 test 1" {
     );
     defer list.deinit();
 
-    const testValue: i64 = try part1(list);
+    const testValue: i64 = try part1(std.testing.allocator, list);
     try std.testing.expectEqual(testValue, 13);
 }
 
@@ -72,11 +71,11 @@ test "part 1 full" {
     var data = try util.openFile(std.testing.allocator, "data/input-4-1.txt");
     defer data.deinit();
 
-    const testValue: i64 = try part1(data.lines);
+    const testValue: i64 = try part1(std.testing.allocator, data.lines);
     try std.testing.expectEqual(testValue, 27059);
 }
 
-pub fn part2(list: std.ArrayList([]const u8)) !i64 {
+pub fn part2(allocator: std.mem.Allocator, list: std.ArrayList([]const u8)) !i64 {
     var myNumbers = std.AutoHashMap(i64, bool).init(allocator);
     defer myNumbers.deinit();
     var myCards = std.AutoHashMap(i64, i64).init(allocator);
@@ -155,7 +154,7 @@ test "part 2 test 1" {
     );
     defer list.deinit();
 
-    const testValue: i64 = try part2(list);
+    const testValue: i64 = try part2(std.testing.allocator, list);
     try std.testing.expectEqual(testValue, 30);
 }
 
@@ -163,7 +162,7 @@ test "part 2 full" {
     var data = try util.openFile(std.testing.allocator, "data/input-4-1.txt");
     defer data.deinit();
 
-    const testValue: i64 = try part2(data.lines);
+    const testValue: i64 = try part2(std.testing.allocator, data.lines);
     // 1361334 is too low
     try std.testing.expectEqual(testValue, 5744979);
 }

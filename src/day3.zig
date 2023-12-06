@@ -2,9 +2,8 @@ const std = @import("std");
 const util = @import("util.zig");
 const mem = std.mem;
 const print = std.debug.print;
-const allocator = std.heap.page_allocator;
 
-pub fn part1(list: std.ArrayList([]const u8)) !i64 {
+pub fn part1(allocator: std.mem.Allocator, list: std.ArrayList([]const u8)) !i64 {
     var sum: i64 = 0;
     var matrix = try util.InputMatrix.init(allocator, list);
     defer matrix.deinit();
@@ -69,7 +68,7 @@ test "part 1 test 1" {
     );
     defer list.deinit();
 
-    const testValue: i64 = try part1(list);
+    const testValue: i64 = try part1(std.testing.allocator, list);
     try std.testing.expectEqual(testValue, 4361);
 }
 
@@ -88,7 +87,7 @@ test "part 1 test 2" {
     );
     defer list.deinit();
 
-    const testValue: i64 = try part1(list);
+    const testValue: i64 = try part1(std.testing.allocator, list);
     try std.testing.expectEqual(testValue, 4379);
 }
 
@@ -101,7 +100,7 @@ test "part 1 test 3" {
     );
     defer list.deinit();
 
-    const testValue: i64 = try part1(list);
+    const testValue: i64 = try part1(std.testing.allocator, list);
     try std.testing.expectEqual(testValue, 0);
 }
 
@@ -114,7 +113,7 @@ test "part 1 test 4" {
     );
     defer list.deinit();
 
-    const testValue: i64 = try part1(list);
+    const testValue: i64 = try part1(std.testing.allocator, list);
     try std.testing.expectEqual(testValue, 123);
 }
 
@@ -129,7 +128,7 @@ test "part 1 test 5" {
     );
     defer list.deinit();
 
-    const testValue: i64 = try part1(list);
+    const testValue: i64 = try part1(std.testing.allocator, list);
     try std.testing.expectEqual(testValue, 123);
 }
 
@@ -137,7 +136,7 @@ test "part 1 full" {
     var data = try util.openFile(std.testing.allocator, "data/input-3-1.txt");
     defer data.deinit();
 
-    const testValue: i64 = try part1(data.lines);
+    const testValue: i64 = try part1(std.testing.allocator, data.lines);
     // 513328 is too low
     // 516161 is too high
     try std.testing.expectEqual(testValue, 514969);
@@ -148,7 +147,7 @@ const Part = struct {
     product: i64,
 };
 
-pub fn part2(list: std.ArrayList([]const u8)) !i64 {
+pub fn part2(allocator: std.mem.Allocator, list: std.ArrayList([]const u8)) !i64 {
     var mapOfNumbersByGearCoordinate = std.AutoHashMap([2]usize, Part).init(allocator);
     defer mapOfNumbersByGearCoordinate.deinit();
 
@@ -238,7 +237,7 @@ test "part 2 test 1" {
     );
     defer list.deinit();
 
-    const testValue: i64 = try part2(list);
+    const testValue: i64 = try part2(std.testing.allocator, list);
     try std.testing.expectEqual(testValue, 467835);
 }
 
@@ -246,6 +245,6 @@ test "part 2 full" {
     var data = try util.openFile(std.testing.allocator, "data/input-3-1.txt");
     defer data.deinit();
 
-    const testValue: i64 = try part2(data.lines);
+    const testValue: i64 = try part2(std.testing.allocator, data.lines);
     try std.testing.expectEqual(testValue, 78915902);
 }

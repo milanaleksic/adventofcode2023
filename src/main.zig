@@ -30,36 +30,36 @@ pub fn main() !void {
         },
         2 => {
             switch (part) {
-                1 => std.debug.print("Answer is {d}\n", .{try day2.part1(data.lines)}),
-                2 => std.debug.print("Answer is {d}\n", .{try day2.part2(data.lines)}),
+                1 => std.debug.print("Answer is {d}\n", .{try day2.part1(allocator, data.lines)}),
+                2 => std.debug.print("Answer is {d}\n", .{try day2.part2(allocator, data.lines)}),
                 else => std.debug.print("Unknown / not ready implementation for part {d}\n", .{part}),
             }
         },
         3 => {
             switch (part) {
-                1 => std.debug.print("Answer is {d}\n", .{try day3.part1(data.lines)}),
-                2 => std.debug.print("Answer is {d}\n", .{try day3.part2(data.lines)}),
+                1 => std.debug.print("Answer is {d}\n", .{try day3.part1(allocator, data.lines)}),
+                2 => std.debug.print("Answer is {d}\n", .{try day3.part2(allocator, data.lines)}),
                 else => std.debug.print("Unknown / not ready implementation for part {d}\n", .{part}),
             }
         },
         4 => {
             switch (part) {
-                1 => std.debug.print("Answer is {d}\n", .{try day4.part1(data.lines)}),
-                2 => std.debug.print("Answer is {d}\n", .{try day4.part2(data.lines)}),
+                1 => std.debug.print("Answer is {d}\n", .{try day4.part1(allocator, data.lines)}),
+                2 => std.debug.print("Answer is {d}\n", .{try day4.part2(allocator, data.lines)}),
                 else => std.debug.print("Unknown / not ready implementation for part {d}\n", .{part}),
             }
         },
         5 => {
             switch (part) {
-                1 => std.debug.print("Answer is {d}\n", .{try day5.part1(data.lines)}),
-                2 => std.debug.print("Answer is {d}\n", .{try day5.part2(data.lines)}),
+                1 => std.debug.print("Answer is {d}\n", .{try day5.part1(allocator, data.lines)}),
+                2 => std.debug.print("Answer is {d}\n", .{try day5.part2(allocator, data.lines)}),
                 else => std.debug.print("Unknown / not ready implementation for part {d}\n", .{part}),
             }
         },
         6 => {
             switch (part) {
-                1 => std.debug.print("Answer is {d}\n", .{try day6.part1(data.lines)}),
-                2 => std.debug.print("Answer is {d}\n", .{try day6.part2(data.lines)}),
+                1 => std.debug.print("Answer is {d}\n", .{try day6.part1(allocator, data.lines)}),
+                2 => std.debug.print("Answer is {d}\n", .{try day6.part2(allocator, data.lines)}),
                 else => std.debug.print("Unknown / not ready implementation for part {d}\n", .{part}),
             }
         },

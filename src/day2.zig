@@ -7,7 +7,8 @@ const allowedRed = 12;
 const allowedGreen = 13;
 const allowedBlue = 14;
 
-pub fn part1(list: std.ArrayList([]const u8)) !i64 {
+pub fn part1(allocator: std.mem.Allocator, list: std.ArrayList([]const u8)) !i64 {
+    _ = allocator;
     var sum: i64 = 0;
     for (list.items) |line| {
         // print("line={s}\n", .{line});
@@ -66,7 +67,7 @@ test "part 1" {
     );
     defer list.deinit();
 
-    const testValue: i64 = try part1(list);
+    const testValue: i64 = try part1(std.testing.allocator, list);
     try std.testing.expectEqual(testValue, 8);
 }
 
@@ -74,11 +75,12 @@ test "part 1 full" {
     var data = try util.openFile(std.testing.allocator, "data/input-2-1.txt");
     defer data.deinit();
 
-    const testValue: i64 = try part1(data.lines);
+    const testValue: i64 = try part1(std.testing.allocator, data.lines);
     try std.testing.expectEqual(testValue, 3035);
 }
 
-pub fn part2(list: std.ArrayList([]const u8)) !i64 {
+pub fn part2(allocator: std.mem.Allocator, list: std.ArrayList([]const u8)) !i64 {
+    _ = allocator;
     var sum: i64 = 0;
     for (list.items) |line| {
         // print("line={s}\n", .{line});
@@ -154,7 +156,7 @@ test "part 2" {
     );
     defer list.deinit();
 
-    const testValue: i64 = try part2(list);
+    const testValue: i64 = try part2(std.testing.allocator, list);
     try std.testing.expectEqual(testValue, 2286);
 }
 
@@ -162,6 +164,6 @@ test "part 2 full" {
     var data = try util.openFile(std.testing.allocator, "data/input-2-1.txt");
     defer data.deinit();
 
-    const testValue: i64 = try part2(data.lines);
+    const testValue: i64 = try part2(std.testing.allocator, data.lines);
     try std.testing.expectEqual(testValue, 66027);
 }
