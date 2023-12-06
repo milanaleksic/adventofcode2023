@@ -46,7 +46,7 @@ pub fn part1(list: std.ArrayList([]const u8)) !i64 {
                 numberOfBetterTimes += 1;
             }
         }
-        print("number of better times: {d}\n", .{numberOfBetterTimes});
+        // print("number of better times: {d}\n", .{numberOfBetterTimes});
         product *= numberOfBetterTimes;
     }
 
@@ -136,5 +136,5 @@ test "part 2 full" {
     defer data.deinit();
 
     const testValue: i64 = try part2(data.lines);
-    try std.testing.expectEqual(testValue, 0);
+    try std.testing.expectEqual(testValue, 37286485);
 }
