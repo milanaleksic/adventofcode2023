@@ -1,6 +1,6 @@
 const std = @import("std");
 const process = std.process;
-const allocator = std.heap.page_allocator;
+const allocator = std.heap.c_allocator;
 const util = @import("util.zig");
 const day1 = @import("day1.zig");
 const day2 = @import("day2.zig");
