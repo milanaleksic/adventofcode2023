@@ -10,3 +10,5 @@ Using: zig v0.11.0
 - [x] multi-line test source instead of manual `append` calls
 - [ ] ~switch places for equals comparison in tests, figure out the comptime error cause~ (https://github.com/ziglang/zig/issues/4437)
 - [x] named structs as function results in day2
+- [ ] use test allocator in prod code as arg to verify no leaks occur
+- [ ] try different allocators (arena maybe?)
