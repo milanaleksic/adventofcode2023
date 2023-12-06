@@ -1,19 +1,20 @@
 {
   description = "ThoughtTrain";
   inputs = {
-    nixpkgs.url = "github:NixOS/nixpkgs/release-23.05";
-    nixpkgs-unstable.url = github:NixOS/nixpkgs;
+    # 0.11.0 is on revision e1ee359d16a1886f0771cc433a00827da98d861c
+    # look at: https://lazamar.co.uk/nix-versions/?package=zig&version=0.11.0&fullName=zig-0.11.0&keyName=zig&revision=e1ee359d16a1886f0771cc433a00827da98d861c&channel=nixos-unstable#instructions
+    nixpkgs-pinned.url = "github:NixOS/nixpkgs/e1ee359d16a1886f0771cc433a00827da98d861c";
     flake-utils.url = "github:numtide/flake-utils";
   };
-  outputs = { self, nixpkgs, nixpkgs-unstable, flake-utils }:
+  outputs = { self, nixpkgs-pinned, flake-utils }:
     flake-utils.lib.eachDefaultSystem (system: {
         devShell =
-          with nixpkgs.legacyPackages.${system};
+          with nixpkgs-pinned.legacyPackages.${system};
           mkShell {
             buildInputs = [
-              nixpkgs-unstable.legacyPackages.${system}.zig
-              nixpkgs-unstable.legacyPackages.${system}.zls
-              nixpkgs-unstable.legacyPackages.${system}.lldb
+              nixpkgs-pinned.legacyPackages.${system}.zig
+              nixpkgs-pinned.legacyPackages.${system}.zls
+              nixpkgs-pinned.legacyPackages.${system}.lldb
             ];
             shellHook = ''
               '';
@@ -21,4 +22,3 @@
       }
   );
 }
-
