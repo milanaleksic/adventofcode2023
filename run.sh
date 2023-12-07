@@ -19,10 +19,10 @@ fi
 set -u
 
 run() {
-    echo "```" | tee -a "$4"
+    echo "\`\`\`" | tee -a "$4"
     ts=$(date +%s%N)
     "$SCRIPT_DIR/zig-out/bin/adventofcode2023" $1 $2 $3 2>&1 | tee -a "$4"
-    echo "```" | tee -a "$4"
+    echo "\`\`\`" | tee -a "$4"
     echo "Done in *$((($(date +%s%N) - $ts)/1000000))ms*" 2>&1 | tee -a "$4"
 }
 
