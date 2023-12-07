@@ -10,10 +10,18 @@ export SCRIPT_DIR
 echo 'building ReleaseFast...'
 zig build -Doptimize=ReleaseFast
 
+set +u
+if [[ x"${GITHUB_STEP_SUMMARY}" == "x" ]]; then 
+    output=$(mktemp)
+else
+    output=$GITHUB_STEP_SUMMARY
+fi
+set -u
+
 run() {
     ts=$(date +%s%N)
-    "$SCRIPT_DIR/zig-out/bin/adventofcode2023" $1 $2 $3
-    echo "Done in $((($(date +%s%N) - $ts)/1000000))ms"
+    "$SCRIPT_DIR/zig-out/bin/adventofcode2023" $1 $2 $3 2>&1 | tee -a "$4"
+    echo "Done in $((($(date +%s%N) - $ts)/1000000))ms" 2>&1 | tee -a "$4"
 }
 
 echo 'running...'
@@ -22,14 +30,15 @@ for i in $(seq 1 25);
 do
     if [ -e "data/input-${i}-1.txt" ]
     then
-        run $i 1 data/input-${i}-1.txt
+        run $i 1 data/input-${i}-1.txt "$output"
         ts=$(date +%s%N)
         if [ -e "data/input-${i}-2.txt" ]
         then
-            run $i 2 data/input-${i}-2.txt
+            run $i 2 data/input-${i}-2.txt "$output"
         else
-            run $i 2 data/input-${i}-1.txt
+            run $i 2 data/input-${i}-1.txt "$output"
         fi
     fi
 done
-echo "Total time running: $((($(date +%s%N) - $tsTotal)/1000000))ms"
+echo "Total time running: $((($(date +%s%N) - $tsTotal)/1000000))ms" | tee -a "$output"
+echo "Additionally, output is available in $output"
