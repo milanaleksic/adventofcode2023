@@ -19,12 +19,14 @@ fi
 set -u
 
 run() {
+    echo "```" | tee -a "$4"
     ts=$(date +%s%N)
     "$SCRIPT_DIR/zig-out/bin/adventofcode2023" $1 $2 $3 2>&1 | tee -a "$4"
-    echo "Done in $((($(date +%s%N) - $ts)/1000000))ms" 2>&1 | tee -a "$4"
+    echo "```" | tee -a "$4"
+    echo "Done in *$((($(date +%s%N) - $ts)/1000000))ms*" 2>&1 | tee -a "$4"
 }
 
-echo 'running...'
+echo "**Starting to run the application in the release mode**" | tee -a "$output"
 tsTotal=$(date +%s%N)
 for i in $(seq 1 25);
 do
@@ -40,5 +42,5 @@ do
         fi
     fi
 done
-echo "Total time running: $((($(date +%s%N) - $tsTotal)/1000000))ms" | tee -a "$output"
+echo "Total time running: *$((($(date +%s%N) - $tsTotal)/1000000))ms*" | tee -a "$output"
 echo "Additionally, output is available in $output"
