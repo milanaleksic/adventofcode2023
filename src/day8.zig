@@ -137,13 +137,10 @@ pub fn part2(allocator: std.mem.Allocator, list: std.ArrayList([]const u8)) !i64
     var mapOfVisitedPoints: std.StringHashMap(i64) = std.StringHashMap(i64).init(allocator);
     defer mapOfVisitedPoints.deinit();
 
-    var countOfThreads: usize = 0;
     var iter = map.iterator();
     while (iter.next()) |entry| {
         if (mem.endsWith(u8, entry.key_ptr.*, "A")) {
             var instructionPointer: usize = 0;
-            countOfThreads += 1;
-
             var pointer = entry.key_ptr.*;
             var stepCount: i64 = 0;
             while (stepCount < 1_000_000) {
