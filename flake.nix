@@ -1,5 +1,5 @@
 {
-  description = "ThoughtTrain";
+  description = "AOC2023";
   inputs = {
     # 0.11.0 is on revision e1ee359d16a1886f0771cc433a00827da98d861c
     # look at: https://lazamar.co.uk/nix-versions/?package=zig&version=0.11.0&fullName=zig-0.11.0&keyName=zig&revision=e1ee359d16a1886f0771cc433a00827da98d861c&channel=nixos-unstable#instructions
