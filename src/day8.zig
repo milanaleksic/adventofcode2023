@@ -140,8 +140,13 @@ pub fn part2(allocator: std.mem.Allocator, list: std.ArrayList([]const u8)) !i64
     var iter = map.iterator();
     while (iter.next()) |entry| {
         if (mem.endsWith(u8, entry.key_ptr.*, "A")) {
+            const start = entry.key_ptr.*;
+
+            // uncomment to run cycle analysis on input data and proof LCM is good enough
+            // try cycleAnalysis(allocator, map, start, instructions.?);
+
             var instructionPointer: usize = 0;
-            var pointer = entry.key_ptr.*;
+            var pointer = start;
             var stepCount: i64 = 0;
             while (stepCount < 1_000_000) {
                 stepCount += 1;
@@ -153,7 +158,7 @@ pub fn part2(allocator: std.mem.Allocator, list: std.ArrayList([]const u8)) !i64
                 };
                 pointer = newPointer;
                 if (mem.endsWith(u8, newPointer, "Z")) {
-                    try mapOfVisitedPoints.put(entry.key_ptr.*, stepCount);
+                    try mapOfVisitedPoints.put(start, stepCount);
                     break;
                 }
                 instructionPointer = (instructionPointer + 1) % instructions.?.len;
@@ -161,6 +166,9 @@ pub fn part2(allocator: std.mem.Allocator, list: std.ArrayList([]const u8)) !i64
         }
     }
 
+    // if one does a cycle analysis, you will notice that the nodes are going in circles
+    // and the distance between the start and the first occurrence of Z is equal between
+    // the step when cycle begins and cycle ends, therefore we get a Z on each cycle length
     return lcm(mapOfVisitedPoints);
 }
 
@@ -179,6 +187,53 @@ fn lcm(map: std.StringHashMap(i64)) i64 {
     }
 
     return @bitCast(x);
+}
+
+fn cycleAnalysis(allocator: std.mem.Allocator, map: std.StringHashMap(Node), start: []const u8, instructions: []const u8) !void {
+    var mapCycleDetection: std.StringHashMap(usize) = std.StringHashMap(usize).init(allocator);
+    defer {
+        var keyIter = mapCycleDetection.keyIterator();
+        while (keyIter.next()) |k| {
+            allocator.free(k.*);
+        }
+        mapCycleDetection.deinit();
+    }
+
+    var stepOfEnding: usize = 0;
+    var stepOfCycleStart: usize = 0;
+    var stepOfCycleEnd: usize = 0;
+
+    var instructionPointer: usize = 0;
+    var pointer = start;
+    var stepCount: usize = 0;
+    while (stepCount < 1_000_000) {
+        stepCount += 1;
+        const node = map.get(pointer).?;
+        const newPointer = switch (instructions[instructionPointer]) {
+            'L' => node.leftId,
+            'R' => node.rightId,
+            else => @panic("can not handle instruction"),
+        };
+        pointer = newPointer;
+        if (mem.endsWith(u8, newPointer, "Z")) {
+            stepOfEnding = stepCount;
+            // print("ending detected, stepOfEnding={d}\n", .{stepOfEnding});
+        }
+
+        const key = try std.fmt.allocPrint(allocator, "{s}{d}", .{ pointer, instructionPointer });
+        if (mapCycleDetection.get(key)) |existing| {
+            // print("cycle detected at {d}, lengthOfCycle={d}\n", .{ stepCount, stepCount - existing });
+            stepOfCycleStart = existing;
+            stepOfCycleEnd = stepCount;
+            allocator.free(key);
+            break;
+        } else {
+            try mapCycleDetection.put(key, stepCount);
+        }
+        instructionPointer = (instructionPointer + 1) % instructions.len;
+    }
+    // print("stepOfEnding={d} stepOfCycleStart={d}, stepOfCycleEnd={d}\n", .{ stepOfEnding, stepOfCycleStart, stepOfCycleEnd });
+    std.debug.assert(stepOfEnding == stepOfCycleEnd - stepOfCycleStart);
 }
 
 test "part 2 test 1" {
