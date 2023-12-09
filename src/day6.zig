@@ -7,8 +7,6 @@ pub fn part1(allocator: std.mem.Allocator, list: std.ArrayList([]const u8)) !i64
     var product: i64 = 1;
     var timesRaw = list.items[0];
     var distanceRaw = list.items[1];
-    var lineIter = mem.split(u8, timesRaw, " ");
-    _ = lineIter;
 
     var times: std.ArrayList(i64) = std.ArrayList(i64).init(allocator);
     defer times.deinit();
@@ -77,8 +75,6 @@ test "part 1 full" {
 pub fn part2(allocator: std.mem.Allocator, list: std.ArrayList([]const u8)) !i64 {
     var timesRaw = list.items[0];
     var distanceRaw = list.items[1];
-    var lineIter = mem.split(u8, timesRaw, " ");
-    _ = lineIter;
 
     var oneTimeString: []const u8 = "";
     defer allocator.free(oneTimeString);
