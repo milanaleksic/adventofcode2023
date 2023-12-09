@@ -3,12 +3,46 @@ const util = @import("util.zig");
 const mem = std.mem;
 const print = std.debug.print;
 
+const Data = struct {
+    const Self = @This();
+    allocator: std.mem.Allocator,
+
+    rows: std.ArrayList(std.ArrayList(i64)),
+
+    pub fn init(allocator: std.mem.Allocator, list: std.ArrayList([]const u8)) !Self {
+        var rows: std.ArrayList(std.ArrayList(i64)) = std.ArrayList(std.ArrayList(i64)).init(allocator);
+        for (list.items) |line| {
+            var row: std.ArrayList(i64) = std.ArrayList(i64).init(allocator);
+            var lineIter = std.mem.split(u8, line, " ");
+            while (lineIter.next()) |number| {
+                if (number.len == 0) {
+                    continue;
+                }
+                try row.append(try util.toI64(number));
+            }
+            try rows.append(row);
+        }
+        return Self{
+            .rows = rows,
+            .allocator = allocator,
+        };
+    }
+
+    pub fn deinit(self: *Self) void {
+        for (self.rows.items) |row| {
+            row.deinit();
+        }
+        self.rows.deinit();
+    }
+};
+
 pub fn part1(allocator: std.mem.Allocator, list: std.ArrayList([]const u8)) !i64 {
     var sum: i64 = 0;
 
-    for (list.items) |line| {
-        // print("line={s}\n", .{line});
+    var data = try Data.init(allocator, list);
+    defer data.deinit();
 
+    for (data.rows.items) |rowData| {
         var pyramid: std.ArrayList(std.ArrayList(i64)) = std.ArrayList(std.ArrayList(i64)).init(allocator);
         defer {
             for (pyramid.items) |row| {
@@ -17,17 +51,7 @@ pub fn part1(allocator: std.mem.Allocator, list: std.ArrayList([]const u8)) !i64
             pyramid.deinit();
         }
 
-        var row: std.ArrayList(i64) = std.ArrayList(i64).init(allocator);
-
-        // convert to pyramid
-        var lineIter = std.mem.split(u8, line, " ");
-        while (lineIter.next()) |number| {
-            if (number.len == 0) {
-                continue;
-            }
-            try row.append(try util.toI64(number));
-        }
-        try pyramid.append(row);
+        try pyramid.append(try rowData.clone());
 
         // printPyramid(pyramid);
 
@@ -103,9 +127,10 @@ test "part 1 full" {
 pub fn part2(allocator: std.mem.Allocator, list: std.ArrayList([]const u8)) !i64 {
     var sum: i64 = 0;
 
-    for (list.items) |line| {
-        // print("line={s}\n", .{line});
+    var data = try Data.init(allocator, list);
+    defer data.deinit();
 
+    for (data.rows.items) |rowData| {
         var pyramid: std.ArrayList(std.ArrayList(i64)) = std.ArrayList(std.ArrayList(i64)).init(allocator);
         defer {
             for (pyramid.items) |row| {
@@ -114,19 +139,7 @@ pub fn part2(allocator: std.mem.Allocator, list: std.ArrayList([]const u8)) !i64
             pyramid.deinit();
         }
 
-        var row: std.ArrayList(i64) = std.ArrayList(i64).init(allocator);
-
-        // convert to pyramid
-        var lineIter = std.mem.split(u8, line, " ");
-        while (lineIter.next()) |number| {
-            if (number.len == 0) {
-                continue;
-            }
-            try row.append(try util.toI64(number));
-        }
-        try pyramid.append(row);
-
-        // printPyramid(pyramid);
+        try pyramid.append(try rowData.clone());
 
         // calculate lower rows
         while (true) {
