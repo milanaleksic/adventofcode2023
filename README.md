@@ -4,11 +4,14 @@ done by: milan@aleksic.dev
 
 Using: zig v0.11.0
 
+> Note: I am a Zig newbie & using AoC to learn as-I-go
+
 ```bash
 ➜ ./run.sh
 
 ...
 
+# no dependencies beyond system
 ➜ otool -L zig-out/bin/adventofcode2023
 zig-out/bin/adventofcode2023:
         /usr/lib/libSystem.B.dylib (compatibility version 1.0.0, current version 1336.0.0)
