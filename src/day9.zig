@@ -56,8 +56,9 @@ pub fn part1(allocator: std.mem.Allocator, list: std.ArrayList([]const u8)) !i64
         // printPyramid(pyramid);
 
         // calculate lower rows
+        var index: usize = 0;
         while (true) {
-            var newRow: std.ArrayList(i64) = std.ArrayList(i64).init(allocator);
+            var newRow: std.ArrayList(i64) = try std.ArrayList(i64).initCapacity(allocator, rowData.items.len - index);
             var previous: ?i64 = null;
             var allZeros: bool = true;
             for (pyramid.items[pyramid.items.len - 1].items) |n| {
@@ -76,6 +77,7 @@ pub fn part1(allocator: std.mem.Allocator, list: std.ArrayList([]const u8)) !i64
             if (allZeros) {
                 break;
             }
+            index += 1;
         }
         // printPyramid(pyramid);
 
@@ -142,8 +144,9 @@ pub fn part2(allocator: std.mem.Allocator, list: std.ArrayList([]const u8)) !i64
         try pyramid.append(try rowData.clone());
 
         // calculate lower rows
+        var index: usize = 0;
         while (true) {
-            var newRow: std.ArrayList(i64) = std.ArrayList(i64).init(allocator);
+            var newRow: std.ArrayList(i64) = try std.ArrayList(i64).initCapacity(allocator, rowData.items.len - index);
             var previous: ?i64 = null;
             var allZeros: bool = true;
             for (pyramid.items[pyramid.items.len - 1].items) |n| {
@@ -162,6 +165,7 @@ pub fn part2(allocator: std.mem.Allocator, list: std.ArrayList([]const u8)) !i64
             if (allZeros) {
                 break;
             }
+            index += 1;
         }
         // printPyramid(pyramid);
 
