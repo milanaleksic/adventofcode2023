@@ -33,6 +33,15 @@ const NodeType = enum {
             else => unreachable,
         };
     }
+
+    pub fn chooseStartDirection(self: NodeType) Direction {
+        return if (self == NodeType.NW or self == NodeType.NS or self == NodeType.NE)
+            Direction.North
+        else if (self == NodeType.SW or self == NodeType.WE)
+            Direction.West
+        else
+            Direction.South;
+    }
 };
 
 const Loc = struct {
@@ -219,15 +228,8 @@ pub fn part1(allocator: std.mem.Allocator, list: std.ArrayList([]const u8)) !i64
     // print("Starting from {}\n", .{data.start});
     var node: *Node = &data.rows.items[data.start.y].items[data.start.x];
     node.nodeType = data.figureOutStartingPoint();
-    var direction = if (node.nodeType == NodeType.NW or node.nodeType == NodeType.NS or node.nodeType == NodeType.NE)
-        Direction.North
-    else if (node.nodeType == NodeType.SW or node.nodeType == NodeType.WE)
-        Direction.West
-    else
-        Direction.South;
+    var direction = node.nodeType.chooseStartDirection();
 
-    var maxDistance: usize = 0;
-    _ = maxDistance;
     var distance: i64 = 0;
     while (true) {
         distance += 1;
@@ -277,31 +279,100 @@ test "part 1 full" {
     defer data.deinit();
 
     const testValue: i64 = try part1(std.testing.allocator, data.lines);
-    try std.testing.expectEqual(testValue, -1);
+    try std.testing.expectEqual(testValue, 6733);
 }
 
 pub fn part2(allocator: std.mem.Allocator, list: std.ArrayList([]const u8)) !i64 {
-    var sum: i64 = 0;
+    var count: i64 = 0;
 
     var data = try Data.init(allocator, list);
     defer data.deinit();
 
-    // access input data...
-    // for (data.rows.items) |rowData| {
+    // print("Starting from {}\n", .{data.start});
+    var node: *Node = &data.rows.items[data.start.y].items[data.start.x];
+    node.nodeType = data.figureOutStartingPoint();
+    var direction = node.nodeType.chooseStartDirection();
 
-    // }
-
-    return sum;
+    while (true) {
+        var nodeWithDirection = data.nextNode(node.location, direction);
+        // print("{}->{} because pipe is {}\n", .{ node, nodeWithDirection.node, node.nodeType });
+        node = nodeWithDirection.node;
+        direction = nodeWithDirection.direction;
+        if (node.location.x == data.start.x and node.location.y == data.start.y) {
+            break;
+        }
+    }
+    return count;
 }
 
-test "part 2 test 1" {
+test "part 2 test 0" {
     var list = try util.parseToListOfStrings([]const u8,
-        \\...
+        \\...........
+        \\.S-------7.
+        \\.|.......|.
+        \\.L-------J.
+        \\...........
     );
     defer list.deinit();
 
     const testValue: i64 = try part2(std.testing.allocator, list);
-    try std.testing.expectEqual(testValue, -1);
+    try std.testing.expectEqual(testValue, 7);
+}
+
+test "part 2 test 1" {
+    var list = try util.parseToListOfStrings([]const u8,
+        \\...........
+        \\.S-------7.
+        \\.|F-----7|.
+        \\.||.....||.
+        \\.||.....||.
+        \\.|L-7.F-J|.
+        \\.|..|.|..|.
+        \\.L--J.L--J.
+        \\...........
+    );
+    defer list.deinit();
+
+    const testValue: i64 = try part2(std.testing.allocator, list);
+    try std.testing.expectEqual(testValue, 4);
+}
+
+test "part 2 test 2" {
+    var list = try util.parseToListOfStrings([]const u8,
+        \\.F----7F7F7F7F-7....
+        \\.|F--7||||||||FJ....
+        \\.||.FJ||||||||L7....
+        \\FJL7L7LJLJ||LJ.L-7..
+        \\L--J.L7...LJS7F-7L7.
+        \\....F-J..F7FJ|L7L7L7
+        \\....L7.F7||L7|.L7L7|
+        \\.....|FJLJ|FJ|F7|.LJ
+        \\....FJL-7.||.||||...
+        \\....L---J.LJ.LJLJ...
+    );
+    defer list.deinit();
+
+    const testValue: i64 = try part2(std.testing.allocator, list);
+    try std.testing.expectEqual(testValue, 8);
+}
+
+test "part 2 test 3" {
+    var list = try util.parseToListOfStrings([]const u8,
+        \\FF7FSF7F7F7F7F7F---7
+        \\L|LJ||||||||||||F--J
+        \\FL-7LJLJ||||||LJL-77
+        \\F--JF--7||LJLJ7F7FJ-
+        \\L---JF-JLJ.||-FJLJJ7
+        \\|F|F-JF---7F7-L7L|7|
+        \\|FFJF7L7F-JF7|JL---7
+        \\7-L-JL7||F7|L7F-7F7|
+        \\L.L7LFJ|||||FJL7||LJ
+        \\L7JLJL-JLJLJL--JLJ.L
+    );
+    defer list.deinit();
+
+    const testValue: i64 = try part2(std.testing.allocator, list);
+    try std.testing.expectEqual(testValue, 10);
 }
 
 test "part 2 full" {
