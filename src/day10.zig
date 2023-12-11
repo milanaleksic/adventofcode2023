@@ -8,6 +8,15 @@ const Direction = enum {
     West,
     South,
     East,
+
+    pub fn reverse(self: Direction) Direction {
+        return switch (self) {
+            Direction.North => Direction.South,
+            Direction.South => Direction.North,
+            Direction.West => Direction.East,
+            Direction.East => Direction.West,
+        };
+    }
 };
 
 const NodeType = enum {
@@ -34,14 +43,14 @@ const NodeType = enum {
         };
     }
 
-    pub fn toPathChar(self: NodeType) u8 {
+    pub fn toPathChar(self: NodeType) u16 {
         return switch (self) {
             NodeType.NS => '|',
             NodeType.WE => '-',
-            NodeType.NE => 'L',
-            NodeType.NW => 'J',
-            NodeType.SW => '7',
-            NodeType.SE => 'F',
+            NodeType.NE => '└',
+            NodeType.NW => '┘',
+            NodeType.SW => '┐',
+            NodeType.SE => '┌',
             else => '!',
         };
     }
@@ -53,6 +62,18 @@ const NodeType = enum {
             Direction.West
         else
             Direction.South;
+    }
+
+    pub fn matchOppositeSide(self: NodeType, incomingDirection: Direction) ?Direction {
+        return switch (self) {
+            NodeType.NW => if (incomingDirection == Direction.North) Direction.West else if (incomingDirection == Direction.West) Direction.North else null,
+            NodeType.NS => if (incomingDirection == Direction.North) Direction.South else if (incomingDirection == Direction.South) Direction.North else null,
+            NodeType.WE => if (incomingDirection == Direction.East) Direction.West else if (incomingDirection == Direction.West) Direction.East else null,
+            NodeType.NE => if (incomingDirection == Direction.North) Direction.East else if (incomingDirection == Direction.East) Direction.North else null,
+            NodeType.SW => if (incomingDirection == Direction.South) Direction.West else if (incomingDirection == Direction.West) Direction.South else null,
+            NodeType.SE => if (incomingDirection == Direction.South) Direction.East else if (incomingDirection == Direction.East) Direction.South else null,
+            else => return null,
+        };
     }
 };
 
@@ -71,7 +92,7 @@ const Node = struct {
     location: Loc,
     // relevant for path 2
     partOfPath: bool,
-    kind: ?ExitRoute,
+    escapes: ?bool,
     underInvestigation: bool,
 };
 
@@ -98,7 +119,13 @@ const Data = struct {
                 if (nodeType == NodeType.START) {
                     start = loc;
                 }
-                var node: Node = Node{ .nodeType = nodeType, .location = loc, .partOfPath = false, .kind = null, .underInvestigation = false };
+                var node: Node = Node{
+                    .nodeType = nodeType,
+                    .location = loc,
+                    .partOfPath = false,
+                    .escapes = null,
+                    .underInvestigation = false,
+                };
                 try row.append(node);
             }
             try rows.append(row);
@@ -154,128 +181,24 @@ const Data = struct {
     pub fn nextNode(self: *Self, loc: Loc, incomingDirection: Direction) ?NodeWithDirection {
         const node = self.rows.items[loc.y].items[loc.x];
         // print("Approaching {} from {}\n", .{ node, incomingDirection });
-        switch (node.nodeType) {
-            NodeType.NW => if (incomingDirection == Direction.North) {
-                if (self.goTo(loc, Direction.West)) |nl| {
-                    return NodeWithDirection{
-                        .node = &self.rows.items[nl.y].items[nl.x],
-                        .direction = Direction.East,
-                    };
-                } else return null;
-            } else if (incomingDirection == Direction.West) {
-                if (self.goTo(loc, Direction.North)) |nl| {
-                    return NodeWithDirection{
-                        .node = &self.rows.items[nl.y].items[nl.x],
-                        .direction = Direction.South,
-                    };
-                }
-            } else return undefined,
-            NodeType.NE => if (incomingDirection == Direction.North) {
-                if (self.goTo(loc, Direction.East)) |nl| {
-                    return NodeWithDirection{
-                        .node = &self.rows.items[nl.y].items[nl.x],
-                        .direction = Direction.West,
-                    };
-                } else return null;
-            } else if (incomingDirection == Direction.East) {
-                if (self.goTo(loc, Direction.North)) |nl| {
-                    return NodeWithDirection{
-                        .node = &self.rows.items[nl.y].items[nl.x],
-                        .direction = Direction.South,
-                    };
-                }
-            } else return undefined,
-            NodeType.SE => if (incomingDirection == Direction.South) {
-                if (self.goTo(loc, Direction.East)) |nl| {
-                    return NodeWithDirection{
-                        .node = &self.rows.items[nl.y].items[nl.x],
-                        .direction = Direction.West,
-                    };
-                } else return null;
-            } else if (incomingDirection == Direction.East) {
-                if (self.goTo(loc, Direction.South)) |nl| {
-                    return NodeWithDirection{
-                        .node = &self.rows.items[nl.y].items[nl.x],
-                        .direction = Direction.North,
-                    };
-                }
-            } else return undefined,
-            NodeType.SW => if (incomingDirection == Direction.South) {
-                if (self.goTo(loc, Direction.West)) |nl| {
-                    return NodeWithDirection{
-                        .node = &self.rows.items[nl.y].items[nl.x],
-                        .direction = Direction.East,
-                    };
-                } else return null;
-            } else if (incomingDirection == Direction.West) {
-                if (self.goTo(loc, Direction.South)) |nl| {
-                    return NodeWithDirection{
-                        .node = &self.rows.items[nl.y].items[nl.x],
-                        .direction = Direction.North,
-                    };
-                }
-            } else return undefined,
-            NodeType.WE => if (incomingDirection == Direction.West) {
-                if (self.goTo(loc, Direction.East)) |nl| {
-                    return NodeWithDirection{
-                        .node = &self.rows.items[nl.y].items[nl.x],
-                        .direction = Direction.West,
-                    };
-                } else return null;
-            } else if (incomingDirection == Direction.East) {
-                if (self.goTo(loc, Direction.West)) |nl| {
-                    return NodeWithDirection{
-                        .node = &self.rows.items[nl.y].items[nl.x],
-                        .direction = Direction.East,
-                    };
-                }
-            } else return undefined,
-            NodeType.NS => if (incomingDirection == Direction.North) {
-                if (self.goTo(loc, Direction.South)) |nl| {
-                    return NodeWithDirection{
-                        .node = &self.rows.items[nl.y].items[nl.x],
-                        .direction = Direction.North,
-                    };
-                } else return null;
-            } else if (incomingDirection == Direction.South) {
-                if (self.goTo(loc, Direction.North)) |nl| {
-                    return NodeWithDirection{
-                        .node = &self.rows.items[nl.y].items[nl.x],
-                        .direction = Direction.South,
-                    };
-                }
-            } else return undefined,
-            else => return null,
-        }
-        return undefined;
-    }
-
-    pub fn goTo(self: *Self, loc: Loc, directionToMove: Direction) ?Loc {
-        if (directionToMove == Direction.North and loc.y > 0) {
-            return Loc{
-                .x = loc.x,
-                .y = loc.y - 1,
-            };
-        }
-        if (directionToMove == Direction.South and loc.y < self.rows.items.len - 1) {
-            return Loc{
-                .x = loc.x,
-                .y = loc.y + 1,
-            };
-        }
-        if (directionToMove == Direction.West and loc.x > 0) {
-            return Loc{
-                .x = loc.x - 1,
-                .y = loc.y,
-            };
-        }
-        if (directionToMove == Direction.East and loc.x < self.rows.items[0].items.len - 1) {
-            return Loc{
-                .x = loc.x + 1,
-                .y = loc.y,
-            };
+        if (node.nodeType.matchOppositeSide(incomingDirection)) |opposite| {
+            if (self.goTo(loc, opposite)) |nl| {
+                return NodeWithDirection{
+                    .node = nl,
+                    .direction = opposite.reverse(),
+                };
+            }
         }
         return null;
+    }
+
+    pub fn goTo(self: *Self, loc: Loc, directionToMove: Direction) ?*Node {
+        return switch (directionToMove) {
+            Direction.North => if (loc.y > 0) &self.rows.items[loc.y - 1].items[loc.x] else null,
+            Direction.South => if (loc.y < self.rows.items.len - 1) &self.rows.items[loc.y + 1].items[loc.x] else null,
+            Direction.West => if (loc.x > 0) &self.rows.items[loc.y].items[loc.x - 1] else null,
+            Direction.East => if (loc.x < self.rows.items[0].items.len - 1) &self.rows.items[loc.y].items[loc.x + 1] else null,
+        };
     }
 
     pub fn printMap(self: *Self) void {
@@ -283,12 +206,12 @@ const Data = struct {
         for (self.rows.items) |row| {
             for (row.items) |cell| {
                 if (cell.partOfPath) {
-                    print("{c}", .{cell.nodeType.toPathChar()});
+                    print("{u}", .{cell.nodeType.toPathChar()});
                     continue;
-                } else if (cell.kind) |kindRaw| {
-                    switch (kindRaw) {
-                        ExitRoute.Escapes => print("O", .{}),
-                        ExitRoute.IsEntrapped => print("I", .{}),
+                } else if (cell.escapes) |escapes| {
+                    switch (escapes) {
+                        true => print("O", .{}),
+                        false => print("I", .{}),
                     }
                     continue;
                 } else {
@@ -298,6 +221,11 @@ const Data = struct {
             print("\n", .{});
         }
     }
+};
+
+const Side = enum {
+    Left,
+    Right,
 };
 
 pub fn part1(allocator: std.mem.Allocator, list: std.ArrayList([]const u8)) !i64 {
@@ -313,7 +241,6 @@ pub fn part1(allocator: std.mem.Allocator, list: std.ArrayList([]const u8)) !i64
     while (true) {
         distance += 1;
         var nodeWithDirection = data.nextNode(node.location, direction);
-        // print("{}->{} because pipe is {}\n", .{ node, nodeWithDirection.node, node.nodeType });
         node = nodeWithDirection.?.node;
         direction = nodeWithDirection.?.direction;
         if (node.location.x == data.start.x and node.location.y == data.start.y) {
@@ -384,15 +311,25 @@ pub fn part2(allocator: std.mem.Allocator, list: std.ArrayList([]const u8)) !i64
 
     // data.printMap();
 
-    for (data.rows.items) |row| {
-        for (row.items) |cell| {
+    // var maxPercent: usize = 0;
+    for (data.rows.items, 0..) |row, i| {
+        _ = i;
+        for (row.items, 0..) |*cell, y| {
+            _ = y;
+            // var P = data.rows.items[0].items.len * i + y;
+            // var G = data.rows.items.len * data.rows.items[0].items.len;
+            // var percent = 100 * P / G;
+            // if (percent > maxPercent) {
+            //     print("Reached {d}%\n", .{percent});
+            //     maxPercent = percent;
+            // }
             if (cell.partOfPath) {
                 continue;
             }
-            if (cell.kind) |_| {
+            if (cell.escapes) |_| {
                 continue;
             }
-            _ = investigate(&data, cell.location);
+            _ = investigate(&data, cell);
         }
     }
 
@@ -400,7 +337,7 @@ pub fn part2(allocator: std.mem.Allocator, list: std.ArrayList([]const u8)) !i64
 
     for (data.rows.items) |row| {
         for (row.items) |cell| {
-            if (!cell.partOfPath and cell.kind == null) {
+            if (!cell.partOfPath and cell.escapes == null) {
                 count += 1;
             }
         }
@@ -409,76 +346,66 @@ pub fn part2(allocator: std.mem.Allocator, list: std.ArrayList([]const u8)) !i64
     return count;
 }
 
-const ExitRoute = enum {
-    Escapes,
-    IsEntrapped,
-};
-
-const Side = enum {
-    Left,
-    Right,
-};
-
-fn investigateSingleNode(data: *Data, node: *Node, incomingDirection: Direction) ?ExitRoute {
+fn nodeIsGroundOnBorder(data: *Data, node: *Node) bool {
     if (node.nodeType == NodeType.GROUND) {
-        if (node.location.x == 0 or node.location.y == 0 or node.location.y == data.rows.items.len - 1 or node.location.x == data.rows.items[0].items.len - 1) {
-            node.kind = ExitRoute.Escapes;
-        }
-        return investigate(data, node.location);
+        return node.location.x == 0 or node.location.y == 0 or node.location.y == data.rows.items.len - 1 or node.location.x == data.rows.items[0].items.len - 1;
     }
+    return false;
+}
 
-    if (node.underInvestigation) {
-        return node.kind;
-    }
-
+fn checkIfNodeEscapes(data: *Data, node: *Node, incomingDirection: Direction) bool {
     if (incomingDirection == Direction.East) {
         if (node.nodeType == NodeType.SW and followTubeToExit(data, node, Direction.South, Side.Right)) {
-            node.kind = ExitRoute.Escapes;
+            return true;
         } else if (node.nodeType == NodeType.NW and followTubeToExit(data, node, Direction.North, Side.Left)) {
-            node.kind = ExitRoute.Escapes;
+            return true;
         }
     } else if (incomingDirection == Direction.West) {
         if (node.nodeType == NodeType.SE and followTubeToExit(data, node, Direction.South, Side.Left)) {
-            node.kind = ExitRoute.Escapes;
+            return true;
         } else if (node.nodeType == NodeType.NE and followTubeToExit(data, node, Direction.North, Side.Right)) {
-            node.kind = ExitRoute.Escapes;
+            return true;
         }
     } else if (incomingDirection == Direction.North) {
         if (node.nodeType == NodeType.SE and followTubeToExit(data, node, Direction.East, Side.Right)) {
-            node.kind = ExitRoute.Escapes;
+            return true;
         } else if (node.nodeType == NodeType.SW and followTubeToExit(data, node, Direction.West, Side.Left)) {
-            node.kind = ExitRoute.Escapes;
+            return true;
         }
     } else if (incomingDirection == Direction.South) {
         if (node.nodeType == NodeType.NE and followTubeToExit(data, node, Direction.East, Side.Left)) {
-            node.kind = ExitRoute.Escapes;
+            return true;
         } else if (node.nodeType == NodeType.NW and followTubeToExit(data, node, Direction.West, Side.Right)) {
-            node.kind = ExitRoute.Escapes;
+            return true;
         }
     }
-    return node.kind;
+    return false;
 }
 
 fn overReachingEscapes(data: *Data, node: *Node, direction: Direction) bool {
     if (data.goTo(node.location, direction)) |overReachingRaw| {
-        if (investigate(data, overReachingRaw)) |kindRaw| {
-            if (kindRaw == ExitRoute.Escapes) {
-                // print("overreaching to ground found at the location {}\n", .{overReachingRaw});
-                return true;
-            }
+        if (overReachingRaw.escapes) |_| {
+            return true;
+        }
+        if (nodeIsGroundOnBorder(data, overReachingRaw)) {
+            // print("overreaching to ground found at the location {}\n", .{overReachingRaw});
+            return true;
         }
     }
     return false;
 }
 
 fn followTubeToExit(data: *Data, node: *Node, incomingDirection: Direction, side: Side) bool {
-    var startLoc = node;
+    const startLoc = node;
     var nodeIter = node;
     var directionIter = incomingDirection;
     while (true) {
         // print("follow tube to: {}\n", .{nodeIter.location});
         var nodeWithDirectionOptional = data.nextNode(nodeIter.location, directionIter);
         if (nodeWithDirectionOptional) |nodeWithDirection| {
+            // if (nodeWithDirection.node.escapes) |_| {
+            //     return true;
+            // }
             if (nodeWithDirection.node.nodeType == NodeType.NW) {
                 if (nodeWithDirection.direction == Direction.North and overReachingEscapes(data, nodeWithDirection.node, Direction.South)) {
                     return side == Side.Left;
@@ -507,7 +434,7 @@ fn followTubeToExit(data: *Data, node: *Node, incomingDirection: Direction, side
 
             directionIter = nodeWithDirection.direction;
             nodeIter = nodeWithDirection.node;
-            if (nodeIter == startLoc) {
+            if (nodeIter.location.x == startLoc.location.x and nodeIter.location.y == startLoc.location.y) {
                 break;
             }
         } else {
@@ -517,49 +444,29 @@ fn followTubeToExit(data: *Data, node: *Node, incomingDirection: Direction, side
     return false;
 }
 
-fn investigate(data: *Data, loc: Loc) ?ExitRoute {
-    var node = &data.rows.items[loc.y].items[loc.x];
-    if (node.kind) |kindRaw| {
-        return kindRaw;
-    }
+fn investigate(data: *Data, node: *Node) void {
     if (node.underInvestigation or node.partOfPath) {
-        return null;
+        return;
+    }
+    if (nodeIsGroundOnBorder(data, node)) {
+        node.escapes = true;
     }
     node.underInvestigation = true;
-    // print("Investigating {}\n", .{loc});
-    // defer {
-    // print("Investigating of {} says: {?}\n", .{ loc, node.kind });
-    // data.printMap();
-    // }
-    if (loc.y > 0) {
-        if (investigateSingleNode(data, &data.rows.items[loc.y - 1].items[loc.x], Direction.South)) |kind| {
-            node.kind = kind;
-            return kind;
+    visit(data, node, Direction.South);
+    visit(data, node, Direction.West);
+    visit(data, node, Direction.East);
+    visit(data, node, Direction.North);
+    // node.underInvestigation = false;
+}
+
+fn visit(data: *Data, node: *Node, direction: Direction) void {
+    if (data.goTo(node.location, direction)) |n| {
+        investigate(data, n);
+        if (n.escapes) |escapes| {
+            node.escapes = escapes;
+        } else if (checkIfNodeEscapes(data, n, direction.reverse())) {
+            node.escapes = true;
         }
-    }
-    if (loc.y < data.rows.items.len - 1) {
-        if (investigateSingleNode(data, &data.rows.items[loc.y + 1].items[loc.x], Direction.North)) |kind| {
-            node.kind = kind;
-            return kind;
-        }
-    }
-    if (loc.x > 0) {
-        if (investigateSingleNode(data, &data.rows.items[loc.y].items[loc.x - 1], Direction.East)) |kind| {
-            node.kind = kind;
-            return kind;
-        }
-    }
-    if (loc.x < data.rows.items[loc.y].items.len - 1) {
-        if (investigateSingleNode(data, &data.rows.items[loc.y].items[loc.x + 1], Direction.West)) |kind| {
-            node.kind = kind;
-            return kind;
-        }
-    }
-    if (node.kind) |kindRaw| {
-        return kindRaw;
-    } else {
-        node.underInvestigation = false;
-        return null;
     }
 }
 
@@ -668,10 +575,10 @@ test "part 2 test 6" {
     try std.testing.expectEqual(testValue, 10);
 }
 
-// test "part 2 full" {
-//     var data = try util.openFile(std.testing.allocator, "data/input-10-1.txt");
-//     defer data.deinit();
+test "part 2 full" {
+    var data = try util.openFile(std.testing.allocator, "data/input-10-1.txt");
+    defer data.deinit();
 
-//     const testValue: i64 = try part2(std.testing.allocator, data.lines);
-//     try std.testing.expectEqual(testValue, -1);
-// }
+    const testValue: i64 = try part2(std.testing.allocator, data.lines);
+    try std.testing.expectEqual(testValue, 435);
+}
