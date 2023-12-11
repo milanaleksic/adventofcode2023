@@ -333,7 +333,7 @@ pub fn part2(allocator: std.mem.Allocator, list: std.ArrayList([]const u8)) !i64
         }
     }
 
-    data.printMap();
+    // data.printMap();
 
     for (data.rows.items) |row| {
         for (row.items) |cell| {
