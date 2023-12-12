@@ -18,6 +18,7 @@ const NodeType = enum {
 };
 
 const Location = struct {
+    id: usize,
     x: usize,
     y: usize,
 };
@@ -35,42 +36,17 @@ const Data = struct {
         for (list.items) |line| {
             // print("line={s}\n", .{line});
             var row: std.ArrayList(NodeType) = try std.ArrayList(NodeType).initCapacity(allocator, line.len);
-            var numberOfGalaxiesInRow: usize = 0;
             for (line) |char| {
                 const nodeType = NodeType.fromChar(char);
                 if (nodeType == NodeType.Galaxy) {
-                    numberOfGalaxiesInRow += 1;
                     countOfGalaxies += 1;
                 }
                 try row.append(nodeType);
             }
-            if (numberOfGalaxiesInRow == 0) {
-                var emptyRow: std.ArrayList(NodeType) = try std.ArrayList(NodeType).initCapacity(allocator, line.len);
-                for (line) |_| {
-                    try emptyRow.append(NodeType.Space);
-                }
-                try rows.append(emptyRow);
-            }
             try rows.append(row);
         }
-        var x: usize = 0;
-        while (x < rows.items[0].items.len) {
-            var hasGalaxyInColumn = false;
-            for (rows.items) |row| {
-                if (row.items[x] == NodeType.Galaxy) {
-                    hasGalaxyInColumn = true;
-                    break;
-                }
-            }
-            if (!hasGalaxyInColumn) {
-                for (rows.items) |*row| {
-                    try row.insert(x, NodeType.Space);
-                }
-                x += 1;
-            }
-            x += 1;
-        }
 
+        var id: usize = 1;
         var galaxies: std.ArrayList(Location) = try std.ArrayList(Location).initCapacity(allocator, countOfGalaxies);
         for (rows.items, 0..) |rowData, yi| {
             for (rowData.items, 0..) |cell, xi| {
@@ -78,10 +54,13 @@ const Data = struct {
                     try galaxies.append(Location{
                         .x = xi,
                         .y = yi,
+                        .id = id,
                     });
+                    id += 1;
                 }
             }
         }
+
         return Self{
             .rows = rows,
             .allocator = allocator,
@@ -109,6 +88,48 @@ const Data = struct {
             print("\n", .{});
         }
     }
+
+    pub fn moveEmptyFor(self: *Self, value: usize) void {
+        // add rows
+        var y: usize = self.rows.items.len;
+        while (y > 0) {
+            y -= 1;
+            var hasGalaxies = false;
+            for (self.rows.items[y].items) |cell| {
+                if (cell == NodeType.Galaxy) {
+                    hasGalaxies = true;
+                    break;
+                }
+            }
+            if (!hasGalaxies) {
+                for (self.galaxies.items) |*galaxy| {
+                    if (galaxy.y > y) {
+                        galaxy.y += value;
+                    }
+                }
+            }
+        }
+
+        // add columns
+        var x: usize = self.rows.items[0].items.len;
+        while (x > 0) {
+            x -= 1;
+            var hasGalaxyInColumn = false;
+            for (self.rows.items) |row| {
+                if (row.items[x] == NodeType.Galaxy) {
+                    hasGalaxyInColumn = true;
+                    break;
+                }
+            }
+            if (!hasGalaxyInColumn) {
+                for (self.galaxies.items) |*galaxy| {
+                    if (galaxy.x > x) {
+                        galaxy.x += value;
+                    }
+                }
+            }
+        }
+    }
 };
 
 fn manhattan(loc1: Location, loc2: Location) usize {
@@ -125,7 +146,7 @@ pub fn part1(allocator: std.mem.Allocator, list: std.ArrayList([]const u8)) !usi
     var data = try Data.init(allocator, list);
     defer data.deinit();
 
-    // data.printMap();
+    data.moveEmptyFor(1);
 
     for (data.galaxies.items) |galaxy1| {
         for (data.galaxies.items) |galaxy2| {
@@ -163,37 +184,104 @@ test "part 1 full" {
     defer data.deinit();
 
     const testValue: usize = try part1(std.testing.allocator, data.lines);
-    try std.testing.expectEqual(testValue, 0);
+    try std.testing.expectEqual(testValue, 9599070);
 }
 
-pub fn part2(allocator: std.mem.Allocator, list: std.ArrayList([]const u8)) !i64 {
-    var sum: i64 = 0;
-
+pub fn part2(allocator: std.mem.Allocator, list: std.ArrayList([]const u8)) !usize {
     var data = try Data.init(allocator, list);
     defer data.deinit();
 
-    // access input data...
-    // for (data.rows.items) |rowData| {
+    return moveAndCalculate(&data, 1_000_000 - 1);
+}
 
-    // }
+fn moveAndCalculate(data: *Data, offset: usize) usize {
+    var sum: usize = 0;
+    data.moveEmptyFor(offset);
 
-    return sum;
+    for (data.galaxies.items) |galaxy1| {
+        for (data.galaxies.items) |galaxy2| {
+            if (galaxy1.x == galaxy2.x and galaxy1.y == galaxy2.y) {
+                continue;
+            }
+            sum += manhattan(galaxy1, galaxy2);
+        }
+    }
+
+    return @divTrunc(sum, 2);
+}
+
+test "part 2 test 0" {
+    var list = try util.parseToListOfStrings([]const u8,
+        \\...#......
+        \\.......#..
+        \\#.........
+        \\..........
+        \\..........
+        \\......#...
+        \\.#........
+        \\.........#
+        \\..........
+        \\.......#..
+        \\#...#.....
+    );
+    defer list.deinit();
+
+    var data = try Data.init(std.testing.allocator, list);
+    defer data.deinit();
+
+    const testValue: usize = moveAndCalculate(&data, 2);
+    try std.testing.expectEqual(testValue, 1030);
 }
 
 test "part 2 test 1" {
     var list = try util.parseToListOfStrings([]const u8,
-        \\...
+        \\...#......
+        \\.......#..
+        \\#.........
+        \\..........
+        \\......#...
+        \\.#........
+        \\.........#
+        \\..........
+        \\.......#..
+        \\#...#.....
     );
     defer list.deinit();
 
-    const testValue: i64 = try part2(std.testing.allocator, list);
-    try std.testing.expectEqual(testValue, -1);
+    var data = try Data.init(std.testing.allocator, list);
+    defer data.deinit();
+
+    const testValue: usize = moveAndCalculate(&data, 9);
+    try std.testing.expectEqual(testValue, 1030);
+}
+
+test "part 2 test 2" {
+    var list = try util.parseToListOfStrings([]const u8,
+        \\...#......
+        \\.......#..
+        \\#.........
+        \\..........
+        \\......#...
+        \\.#........
+        \\.........#
+        \\..........
+        \\.......#..
+        \\#...#.....
+    );
+    defer list.deinit();
+
+    var data = try Data.init(std.testing.allocator, list);
+    defer data.deinit();
+
+    const testValue: usize = moveAndCalculate(&data, 99);
+    try std.testing.expectEqual(testValue, 8410);
 }
 
 test "part 2 full" {
     var data = try util.openFile(std.testing.allocator, "data/input-11-1.txt");
     defer data.deinit();
 
-    const testValue: i64 = try part2(std.testing.allocator, data.lines);
-    try std.testing.expectEqual(testValue, -1);
+    const testValue: usize = try part2(std.testing.allocator, data.lines);
+    // 842646756432 is too high
+    try std.testing.expectEqual(testValue, 842645913794);
 }
