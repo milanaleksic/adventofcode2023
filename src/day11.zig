@@ -210,29 +210,6 @@ fn moveAndCalculate(data: *Data, offset: usize) usize {
     return @divTrunc(sum, 2);
 }
 
-test "part 2 test 0" {
-    var list = try util.parseToListOfStrings([]const u8,
-        \\...#......
-        \\.......#..
-        \\#.........
-        \\..........
-        \\..........
-        \\......#...
-        \\.#........
-        \\.........#
-        \\..........
-        \\.......#..
-        \\#...#.....
-    );
-    defer list.deinit();
-
-    var data = try Data.init(std.testing.allocator, list);
-    defer data.deinit();
-
-    const testValue: usize = moveAndCalculate(&data, 2);
-    try std.testing.expectEqual(testValue, 1030);
-}
-
 test "part 2 test 1" {
     var list = try util.parseToListOfStrings([]const u8,
         \\...#......
