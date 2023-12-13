@@ -23,13 +23,12 @@ pub fn main() !void {
     std.debug.print("Advent of Code 2023 by milan@aleksic.dev: running day {d}, part {d}, input file={s}\n", .{ day, part, inputFile });
 
     var gpa = std.heap.GeneralPurposeAllocator(.{}){};
-    const allocator = gpa.allocator();
-    defer {
-        const deinit_status = gpa.deinit();
-        if (deinit_status == .leak) {
-            @panic("LEAKS FOUND");
-        }
-    }
+    const gpaAlloc = gpa.allocator();
+
+    var arena = std.heap.ArenaAllocator.init(gpaAlloc);
+    defer arena.deinit();
+
+    const allocator = arena.allocator();
 
     var data = try util.openFile(allocator, inputFile);
     defer data.deinit();

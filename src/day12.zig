@@ -5,6 +5,14 @@ const print = std.debug.print;
 
 pub fn part1(allocator: std.mem.Allocator, list: std.ArrayList([]const u8)) !i64 {
     var sum: i64 = 0;
+    var cache = std.StringHashMap(i64).init(allocator);
+    defer {
+        var iter = cache.keyIterator();
+        while (iter.next()) |k| {
+            allocator.free(k.*);
+        }
+        cache.deinit();
+    }
 
     for (list.items) |line| {
         // print("line={s}\n", .{line});
@@ -19,21 +27,16 @@ pub fn part1(allocator: std.mem.Allocator, list: std.ArrayList([]const u8)) !i64
             try groupsNumbers.append(try util.toU8(groupString));
         }
 
-        sum += try run(allocator, field, groupsNumbers);
+        sum += try run(allocator, &cache, field, groupsNumbers);
     }
 
     return sum;
 }
 
-fn run(allocator: std.mem.Allocator, field: []const u8, groupsNumbers: std.ArrayList(u8)) !i64 {
-    var cache = std.StringHashMap(i64).init(allocator);
-    defer {
-        var iter = cache.keyIterator();
-        while (iter.next()) |k| {
-            allocator.free(k.*);
-        }
-        cache.deinit();
-    }
+fn run(allocator: std.mem.Allocator, cache: *std.StringHashMap(i64), field: []const u8, groupsNumbers: std.ArrayList(u8)) !i64 {
+    var newField = try allocator.alloc(u8, field.len);
+    std.mem.copy(u8, newField, field);
+    defer allocator.free(newField);
 
     var groups = try allocator.alloc(u8, groupsNumbers.items.len);
     defer allocator.free(groups);
@@ -41,13 +44,22 @@ fn run(allocator: std.mem.Allocator, field: []const u8, groupsNumbers: std.Array
         groups[i] = groupNumber;
     }
 
-    return try recursiveMatching(allocator, &cache, field, groups);
+    // if (countTotal > 0) {
+    // print("cache hit: {d} (total attempts: {d}) / cache size: {d}\n", .{ 100 * countHit / countTotal, countTotal, cache.count() });
+    // }
+
+    return try recursiveMatching(allocator, cache, newField, groups);
 }
 
-fn recursiveMatching(allocator: std.mem.Allocator, cache: *std.StringHashMap(i64), field: []const u8, groups: []u8) !i64 {
+var countHit: usize = 0;
+var countTotal: usize = 0;
+
+fn recursiveMatching(allocator: std.mem.Allocator, cache: *std.StringHashMap(i64), field: []u8, groups: []u8) !i64 {
+    countTotal += 1;
     var key = try std.fmt.allocPrint(allocator, "{s}-{any}", .{ field, groups });
     // std.debug.print("Analyzing field={s} for groups {any}\n", .{ key, groups });
     if (cache.get(key)) |cached| {
+        countHit += 1;
         // std.debug.print("Returning cached value {d}\n", .{cached});
         defer allocator.free(key);
         return cached;
@@ -63,16 +75,15 @@ fn recursiveMatching(allocator: std.mem.Allocator, cache: *std.StringHashMap(i64
     }
     if (field[0] == '?') {
         defer allocator.free(key);
+
         // here is the main trick in this DP approach: assume both possible values and act accordingly
-        var newField = try allocator.alloc(u8, field.len);
-        std.mem.copy(u8, newField, field);
-        defer allocator.free(newField);
+        field[0] = '.';
+        var v1 = try recursiveMatching(allocator, cache, field, groups);
 
-        newField[0] = '.';
-        var v1 = try recursiveMatching(allocator, cache, newField, groups);
+        field[0] = '#';
+        var v2 = try recursiveMatching(allocator, cache, field, groups);
 
-        newField[0] = '#';
-        var v2 = try recursiveMatching(allocator, cache, newField, groups);
+        field[0] = '?';
 
         return v1 + v2;
     }
@@ -182,9 +193,24 @@ test "part 1 full" {
 
 pub fn part2(allocator: std.mem.Allocator, list: std.ArrayList([]const u8)) !i64 {
     var sum: i64 = 0;
+    var cache = std.StringHashMap(i64).init(allocator);
+    defer {
+        var count: i64 = 0;
+        // print("clearing map data\n", .{});
+        var iter = cache.iterator();
+        while (iter.next()) |item| {
+            allocator.free(item.key_ptr.*);
+            count += 1;
+            if (@mod(count, 1000) == 0) {
+                // print("cleared {d} items\n", .{count});
+            }
+        }
+        // print("clearing map\n", .{});
+        cache.deinit();
+    }
 
     for (list.items) |line| {
-        print("line={s}\n", .{line});
+        // print("line={s}\n", .{line});
         var split = mem.split(u8, line, " ");
         var field = split.next().?;
 
@@ -208,7 +234,7 @@ pub fn part2(allocator: std.mem.Allocator, list: std.ArrayList([]const u8)) !i64
             }
         }
 
-        sum += try run(allocator, actualField, groupsNumbers);
+        sum += try run(allocator, &cache, actualField, groupsNumbers);
     }
 
     return sum;
@@ -222,6 +248,16 @@ test "part 2 test 1" {
         \\????.#...#... 4,1,1
         \\????.######..#####. 1,6,5
         \\?###???????? 3,2,1
+    );
+    defer list.deinit();
+
+    const testValue: i64 = try part2(std.testing.allocator, list);
+    try std.testing.expectEqual(testValue, 525152);
+}
+
+test "part 2 test 2" {
+    var list = try util.parseToListOfStrings([]const u8,
+        \\??.#???#?????? 1,2,8
     );
     defer list.deinit();
 
