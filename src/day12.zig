@@ -255,16 +255,6 @@ test "part 2 test 1" {
     try std.testing.expectEqual(testValue, 525152);
 }
 
-test "part 2 test 2" {
-    var list = try util.parseToListOfStrings([]const u8,
-        \\??.#???#?????? 1,2,8
-    );
-    defer list.deinit();
-
-    const testValue: i64 = try part2(std.testing.allocator, list);
-    try std.testing.expectEqual(testValue, 525152);
-}
-
 test "part 2 full" {
     var data = try util.openFile(std.testing.allocator, "data/input-12-1.txt");
     defer data.deinit();
