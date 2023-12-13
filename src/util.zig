@@ -102,3 +102,7 @@ pub fn printMatrix(data: [][]u8) void {
 pub fn toI64(str: []const u8) !i64 {
     return try std.fmt.parseInt(i64, str, 10);
 }
+
+pub fn toU8(str: []const u8) !u8 {
+    return try std.fmt.parseInt(u8, str, 10);
+}
