@@ -38,27 +38,16 @@ fn run(allocator: std.mem.Allocator, cache: *std.AutoHashMap(u64, i64), field: [
         groups[i] = groupNumber;
     }
 
-    // if (countTotal > 0) {
-    // print("cache hit: {d} (total attempts: {d}) / cache size: {d}\n", .{ 100 * countHit / countTotal, countTotal, cache.count() });
-    // }
-
     return try recursiveMatching(allocator, cache, newField, groups);
 }
 
-var countHit: usize = 0;
-var countTotal: usize = 0;
-
 fn recursiveMatching(allocator: std.mem.Allocator, cache: *std.AutoHashMap(u64, i64), field: []u8, groups: []u8) !i64 {
-    countTotal += 1;
-
     var hasher = std.hash.Wyhash.init(0);
     hasher.update(field);
     hasher.update(groups);
     const key = hasher.final();
 
     if (cache.get(key)) |cached| {
-        countHit += 1;
-        // std.debug.print("Returning cached value {d}\n", .{cached});
         return cached;
     }
     if (field.len == 0) {
