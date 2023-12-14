@@ -30,16 +30,10 @@ echo "**Starting to run the application in the release mode**" | tee -a "$output
 tsTotal=$(date +%s%N)
 for i in $(seq 1 25);
 do
-    if [ -e "data/input-${i}-1.txt" ]
+    if [ -e "data/input-${i}.txt" ]
     then
-        run $i 1 data/input-${i}-1.txt "$output"
-        ts=$(date +%s%N)
-        if [ -e "data/input-${i}-2.txt" ]
-        then
-            run $i 2 data/input-${i}-2.txt "$output"
-        else
-            run $i 2 data/input-${i}-1.txt "$output"
-        fi
+        run $i 1 data/input-${i}.txt "$output"
+        run $i 2 data/input-${i}.txt "$output"
     fi
 done
 echo "Total time running: *$((($(date +%s%N) - $tsTotal)/1000000))ms*" | tee -a "$output"
