@@ -5,7 +5,7 @@ const print = std.debug.print;
 
 pub fn part1(allocator: std.mem.Allocator, list: std.ArrayList([]const u8)) !i64 {
     var sum: i64 = 0;
-    var cache = std.AutoHashMap(u32, i64).init(allocator);
+    var cache = std.AutoHashMap(u64, i64).init(allocator);
     defer cache.deinit();
 
     for (list.items) |line| {
@@ -27,7 +27,7 @@ pub fn part1(allocator: std.mem.Allocator, list: std.ArrayList([]const u8)) !i64
     return sum;
 }
 
-fn run(allocator: std.mem.Allocator, cache: *std.AutoHashMap(u32, i64), field: []const u8, groupsNumbers: std.ArrayList(u8)) !i64 {
+fn run(allocator: std.mem.Allocator, cache: *std.AutoHashMap(u64, i64), field: []const u8, groupsNumbers: std.ArrayList(u8)) !i64 {
     var newField = try allocator.alloc(u8, field.len);
     std.mem.copy(u8, newField, field);
     defer allocator.free(newField);
@@ -48,10 +48,10 @@ fn run(allocator: std.mem.Allocator, cache: *std.AutoHashMap(u32, i64), field: [
 var countHit: usize = 0;
 var countTotal: usize = 0;
 
-fn recursiveMatching(allocator: std.mem.Allocator, cache: *std.AutoHashMap(u32, i64), field: []u8, groups: []u8) !i64 {
+fn recursiveMatching(allocator: std.mem.Allocator, cache: *std.AutoHashMap(u64, i64), field: []u8, groups: []u8) !i64 {
     countTotal += 1;
 
-    var hasher = std.hash.Crc32.init();
+    var hasher = std.hash.Wyhash.init(0);
     hasher.update(field);
     hasher.update(groups);
     const key = hasher.final();
@@ -185,7 +185,7 @@ test "part 1 full" {
 
 pub fn part2(allocator: std.mem.Allocator, list: std.ArrayList([]const u8)) !i64 {
     var sum: i64 = 0;
-    var cache = std.AutoHashMap(u32, i64).init(allocator);
+    var cache = std.AutoHashMap(u64, i64).init(allocator);
     defer cache.deinit();
 
     for (list.items) |line| {
