@@ -146,7 +146,7 @@ test "part 1 full" {
     defer data.deinit();
 
     const testValue: i64 = try part1(std.testing.allocator, data.lines);
-    try std.testing.expectEqual(testValue, -1);
+    try std.testing.expectEqual(testValue, 40006);
 }
 
 pub fn part2(allocator: std.mem.Allocator, list: std.ArrayList([]const u8)) !i64 {
