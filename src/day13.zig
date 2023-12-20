@@ -142,7 +142,7 @@ test "part 1 test 1" {
 }
 
 test "part 1 full" {
-    var data = try util.openFile(std.testing.allocator, "data/input-13-1.txt");
+    var data = try util.openFile(std.testing.allocator, "data/input-13.txt");
     defer data.deinit();
 
     const testValue: i64 = try part1(std.testing.allocator, data.lines);
@@ -156,11 +156,15 @@ pub fn part2(allocator: std.mem.Allocator, list: std.ArrayList([]const u8)) !i64
     defer data.deinit();
 
     for (data.rowsSegments.items, 0..) |segment, i| {
+        // print("analyzing pattern {d}\n", .{i + 1});
         const calculated = calculateWithSmudge(segment, 100);
         if (calculated > 0) {
+            // print("rows found {d}\n", .{calculated});
             sum += calculated;
         } else {
-            sum += calculateWithSmudge(data.colsSegments.items[i], 1);
+            const calculated2 = calculateWithSmudge(data.colsSegments.items[i], 1);
+            // print("cols found: {d}\n", .{calculated2});
+            sum += calculated2;
         }
     }
 
@@ -216,8 +220,7 @@ fn calculateWithSmudge(segment: std.ArrayList([]const u8), multiplier: i64) i64 
                 break;
             }
         }
-        if (matches > 0 and numberOfSmudges <= 1) {
-            // print("matches found {d}\n", .{matches * multiplier});
+        if (numberOfSmudges == 1 and matches > 0) {
             return matches * multiplier;
         }
     }
@@ -263,10 +266,9 @@ test "part 2 test 1" {
 }
 
 test "part 2 full" {
-    var data = try util.openFile(std.testing.allocator, "data/input-13-1.txt");
+    var data = try util.openFile(std.testing.allocator, "data/input-13.txt");
     defer data.deinit();
 
     const testValue: i64 = try part2(std.testing.allocator, data.lines);
-    // 41878 is too high
     try std.testing.expectEqual(testValue, -1);
 }

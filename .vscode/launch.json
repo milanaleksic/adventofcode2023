@@ -10,7 +10,7 @@
             "args": [
                 "2", 
                 "1",
-                "${workspaceFolder}/data/input-2-1.txt"
+                "${workspaceFolder}/data/input-2.txt"
             ],
             "cwd": "${workspaceFolder}",
             "preLaunchTask": "build"

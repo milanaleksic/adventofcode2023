@@ -213,7 +213,7 @@ test "part 1 test 6" {
 }
 
 test "part 1 full" {
-    var data = try util.openFile(std.testing.allocator, "data/input-7-1.txt");
+    var data = try util.openFile(std.testing.allocator, "data/input-7.txt");
     defer data.deinit();
 
     const testValue: i64 = try part1(std.testing.allocator, data.lines);
@@ -387,7 +387,7 @@ test "part 2 test 9" {
 }
 
 test "part 2 full" {
-    var data = try util.openFile(std.testing.allocator, "data/input-7-1.txt");
+    var data = try util.openFile(std.testing.allocator, "data/input-7.txt");
     defer data.deinit();
 
     const testValue: i64 = try part2(std.testing.allocator, data.lines);

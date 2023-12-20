@@ -112,7 +112,7 @@ test "part 1 test 2" {
 }
 
 test "part 1 full" {
-    var data = try util.openFile(std.testing.allocator, "data/input-8-1.txt");
+    var data = try util.openFile(std.testing.allocator, "data/input-8.txt");
     defer data.deinit();
 
     const testValue: i64 = try part1(std.testing.allocator, data.lines);
@@ -194,7 +194,7 @@ test "part 2 test 1" {
 }
 
 test "part 2 cycle analysis" {
-    var input = try util.openFile(std.testing.allocator, "data/input-8-1.txt");
+    var input = try util.openFile(std.testing.allocator, "data/input-8.txt");
     defer input.deinit();
 
     var data = try Data.init(std.testing.allocator, input.lines);
@@ -256,7 +256,7 @@ fn cycleAnalysis(map: std.StringHashMap(Node), start: []const u8, instructions: 
 }
 
 test "part 2 full" {
-    var data = try util.openFile(std.testing.allocator, "data/input-8-1.txt");
+    var data = try util.openFile(std.testing.allocator, "data/input-8.txt");
     defer data.deinit();
 
     const testValue: i64 = try part2(std.testing.allocator, data.lines);
