@@ -65,7 +65,7 @@ pub fn openFile(allocator: std.mem.Allocator, inputFile: []const u8) !FileData {
     var buf_reader = std.io.bufferedReader(file.reader());
     var in_stream = buf_reader.reader();
 
-    var buf: [1024]u8 = undefined;
+    var buf: [32768]u8 = undefined;
     while (try in_stream.readUntilDelimiterOrEof(&buf, '\n')) |line| {
         const buf2 = try allocator.dupe(u8, line);
         try list.append(buf2);
