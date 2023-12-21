@@ -91,9 +91,8 @@ const Box = struct {
     allocator: std.mem.Allocator,
 
     pub fn init(allocator: std.mem.Allocator) !Self {
-        var list: std.ArrayList(Lens) = std.ArrayList(Lens).init(allocator);
         return Self{
-            .list = list,
+            .list = std.ArrayList(Lens).init(allocator),
             .allocator = allocator,
         };
     }
@@ -114,16 +113,14 @@ const Box = struct {
                 return;
             }
         }
-        try self.list.append(Lens{
+        var lens = Lens{
             .label = label,
             .value = value,
-        });
+        };
+        try self.list.append(lens);
     }
 
     pub fn deinit(self: *Self) void {
-        for (self.list.items) |*lens| {
-            self.allocator.free(lens);
-        }
         self.list.deinit();
     }
 };
@@ -133,7 +130,11 @@ pub fn part2(allocator: std.mem.Allocator, list: std.ArrayList([]const u8)) !usi
     defer data.deinit();
 
     var boxes: [256]Box = undefined;
-
+    defer {
+        for (0..256) |i| {
+            boxes[i].deinit();
+        }
+    }
     for (0..256) |i| {
         boxes[i] = try Box.init(allocator);
     }
@@ -179,5 +180,5 @@ test "part 2 full" {
     defer data.deinit();
 
     const testValue: usize = try part2(std.testing.allocator, data.lines);
-    try std.testing.expectEqual(testValue, 0);
+    try std.testing.expectEqual(testValue, 271384);
 }
