@@ -74,9 +74,10 @@ const Data = struct {
     }
 
     pub fn moveToNorth(self: *Self) void {
-        for (0..self.rows.items.len) |x| {
+        const dim: usize = self.rows.items.len;
+        for (0..dim) |x| {
             var foundation: usize = 0;
-            for (0..self.rows.items.len) |y| {
+            for (0..dim) |y| {
                 var cell = self.rows.items[y].items[x];
                 switch (cell.nodeType) {
                     NodeType.CubeRock => foundation = y + 1,
@@ -94,26 +95,85 @@ const Data = struct {
         }
     }
 
-    // pub fn moveToSouth(self: *Self) void {
-    //     for (0..self.rows.items.len) |x| {
-    //         var foundation: usize = self.rows.items.len - 1;
-    //         for (self.rows.items, 0..) |*row, y| {
-    //             var cell = row.items[x];
-    //             switch (cell.nodeType) {
-    //                 NodeType.CubeRock => foundation = y + 1,
-    //                 NodeType.RoundRock => {
-    //                     if (foundation < y) {
-    //                         // print("Moving item from {d} to {d}\n", .{ y, foundation });
-    //                         self.rows.items[foundation].items[x].nodeType = NodeType.RoundRock;
-    //                         self.rows.items[y].items[x].nodeType = NodeType.Empty;
-    //                     }
-    //                     foundation += 1;
-    //                 },
-    //                 else => {},
-    //             }
-    //         }
-    //     }
-    // }
+    pub fn moveToSouth(self: *Self) void {
+        const dim: usize = self.rows.items.len;
+        for (0..dim) |x| {
+            var foundation: usize = dim - 1;
+            for (0..dim) |yiter| {
+                const y = dim - yiter - 1;
+                var cell = self.rows.items[y].items[x];
+                switch (cell.nodeType) {
+                    NodeType.CubeRock => {
+                        if (y > 0) {
+                            foundation = y - 1;
+                        }
+                    },
+                    NodeType.RoundRock => {
+                        if (foundation > y) {
+                            // print("Moving item from {d} to {d}\n", .{ y, foundation });
+                            self.rows.items[foundation].items[x].nodeType = NodeType.RoundRock;
+                            self.rows.items[y].items[x].nodeType = NodeType.Empty;
+                        }
+                        if (foundation > 0) {
+                            foundation -= 1;
+                        }
+                    },
+                    else => {},
+                }
+            }
+        }
+    }
+
+    pub fn moveToWest(self: *Self) void {
+        const dim: usize = self.rows.items.len;
+        for (0..dim) |y| {
+            var foundation: usize = 0;
+            for (0..dim) |x| {
+                var cell = self.rows.items[y].items[x];
+                switch (cell.nodeType) {
+                    NodeType.CubeRock => foundation = x + 1,
+                    NodeType.RoundRock => {
+                        if (foundation < x) {
+                            // print("Moving item from {d} to {d}\n", .{ x, foundation });
+                            self.rows.items[y].items[foundation].nodeType = NodeType.RoundRock;
+                            self.rows.items[y].items[x].nodeType = NodeType.Empty;
+                        }
+                        foundation += 1;
+                    },
+                    else => {},
+                }
+            }
+        }
+    }
+
+    pub fn moveToEast(self: *Self) void {
+        const dim: usize = self.rows.items.len;
+        for (0..dim) |y| {
+            var foundation: usize = dim - 1;
+            for (0..dim) |xiter| {
+                const x = dim - xiter - 1;
+                var cell = self.rows.items[y].items[x];
+                switch (cell.nodeType) {
+                    NodeType.CubeRock => {
+                        if (x > 0) {
+                            foundation = x - 1;
+                        }
+                    },
+                    NodeType.RoundRock => {
+                        if (foundation > x) {
+                            // print("Moving item from {d} to {d}\n", .{ y, foundation });
+                            self.rows.items[y].items[foundation].nodeType = NodeType.RoundRock;
+                            self.rows.items[y].items[x].nodeType = NodeType.Empty;
+                        }
+                        if (foundation > 0) {
+                            foundation -= 1;
+                        }
+                    },
+                    else => {},
+                }
+            }
+        }
+    }
 
     pub fn calculate(self: *Self) usize {
         var sum: usize = 0;
@@ -176,15 +236,56 @@ pub fn part2(allocator: std.mem.Allocator, list: std.ArrayList([]const u8)) !usi
     var data = try Data.init(allocator, list);
     defer data.deinit();
 
-    for (0..100) |_| {
-        data.moveToNorth();
-        // data.moveToWest();
-        // data.moveToSouth();
-        // data.moveToEast();
-        print("{d}\n", .{data.calculate()});
-    }
+    var cycleDetection: std.ArrayList(usize) = std.ArrayList(usize).init(allocator);
+    defer cycleDetection.deinit();
 
-    return data.calculate();
+    const target: usize = 1_000_000_000;
+
+    for (1..target + 1) |i| {
+        _ = i;
+        data.moveToNorth();
+        data.moveToWest();
+        data.moveToSouth();
+        data.moveToEast();
+        try cycleDetection.append(data.calculate());
+        if (isCycleDetectable(cycleDetection)) |cycle| {
+            print("Cycle detected: {}\n", .{cycle});
+            const numerator = target - cycle.begin;
+            const denominator = cycle.end - cycle.begin + 1;
+            // print("numerator={d}, denominator={d}\n", .{ numerator, denominator });
+            return cycleDetection.items[cycle.begin + @mod(numerator, denominator) - 1];
+        }
+        // print("{d} -> {d}\n", .{ i, data.calculate() });
+    }
+    @panic("no solution found");
+}
+
+const Cycle = struct {
+    begin: usize,
+    end: usize,
+};
+
+fn isCycleDetectable(cycleDetection: std.ArrayList(usize)) ?Cycle {
+    if (cycleDetection.items.len < 10) {
+        return null;
+    }
+    // minimum size of a cycle we can detect
+    const cycle: usize = 5;
+    for (cycle..cycleDetection.items.len) |i| {
+        if (3 * i > cycleDetection.items.len - 1) {
+            continue;
+        }
+        var x1 = cycleDetection.items.len - i - 1;
+        var x2 = cycleDetection.items.len - 2 * i - 1;
+        var x3 = cycleDetection.items.len - 3 * i - 1;
+        if (cycleDetection.items[x1] == cycleDetection.items[x2] and cycleDetection.items[x2] == cycleDetection.items[x3]) {
+            return Cycle{
+                .begin = x2,
+                .end = x1 - 1,
+            };
+        }
+    }
+    return null;
 }
 
 test "part 2 test 1" {
@@ -202,7 +303,7 @@ test "part 2 test 1" {
     );
     defer list.deinit();
 
-    const testValue: usize = try part1(std.testing.allocator, list);
+    const testValue: usize = try part2(std.testing.allocator, list);
     try std.testing.expectEqual(testValue, 64);
 }
 
@@ -211,5 +312,5 @@ test "part 2 full" {
     defer data.deinit();
 
     const testValue: usize = try part2(std.testing.allocator, data.lines);
-    try std.testing.expectEqual(testValue, 0);
+    try std.testing.expectEqual(testValue, 118747);
 }
