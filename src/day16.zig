@@ -71,6 +71,12 @@ const Data = struct {
         self.rows.deinit();
     }
 
+    pub fn get(self: *Self, loc: Location) *Node {
+        const x: usize = @bitCast(loc.x);
+        const y: usize = @bitCast(loc.y);
+        return &self.rows.items[y].items[x];
+    }
+
     pub fn printMap(self: *Self, energizedPrioritized: bool) void {
         print("\n", .{});
         for (self.rows.items) |row| {
@@ -110,60 +116,55 @@ const Direction = enum {
 };
 
 const Location = struct {
-    x: usize,
-    y: usize,
+    x: i64,
+    y: i64,
 };
 
 const Ray = struct {
     const Self = @This();
     direction: Direction,
-    location: ?Location,
+    location: Location,
 
     pub fn step(self: Self, data: Data) ?Location {
-        if (self.location) |loc| {
-            return switch (self.direction) {
-                Direction.N => if (loc.y == 0) null else Location{
-                    .x = loc.x,
-                    .y = loc.y - 1,
-                },
-                Direction.W => if (loc.x == 0) null else Location{
-                    .x = loc.x - 1,
-                    .y = loc.y,
-                },
-                Direction.S => if (loc.y == data.rows.items.len - 1) null else Location{
-                    .x = loc.x,
-                    .y = loc.y + 1,
-                },
-                Direction.E => if (loc.x == data.rows.items[0].items.len - 1) null else Location{
-                    .x = loc.x + 1,
-                    .y = loc.y,
-                },
-            };
-        } else {
-            return Location{
-                .x = 0,
-                .y = 0,
-            };
-        }
+        return switch (self.direction) {
+            Direction.N => if (self.location.y == 0) null else Location{
+                .x = self.location.x,
+                .y = self.location.y - 1,
+            },
+            Direction.W => if (self.location.x == 0) null else Location{
+                .x = self.location.x - 1,
+                .y = self.location.y,
+            },
+            Direction.S => if (self.location.y == data.rows.items.len - 1) null else Location{
+                .x = self.location.x,
+                .y = self.location.y + 1,
+            },
+            Direction.E => if (self.location.x == data.rows.items[0].items.len - 1) null else Location{
+                .x = self.location.x + 1,
+                .y = self.location.y,
+            },
+        };
     }
 };
 
 pub fn part1(allocator: std.mem.Allocator, list: std.ArrayList([]const u8)) !i64 {
+    return calculate(allocator, list, Ray{
+        .location = Location{
+            .x = -1,
+            .y = 0,
+        },
+        .direction = Direction.E,
+    });
+}
+
+fn calculate(allocator: std.mem.Allocator, list: std.ArrayList([]const u8), initialRay: Ray) !i64 {
     var data = try Data.init(allocator, list);
     defer data.deinit();
 
     var rays = std.ArrayList(Ray).init(allocator);
     defer rays.deinit();
 
-    // data.printMap(false);
-
-    _ = try data.rows.items[0].items[0].energize(Direction.E);
-    try runRay(Ray{
-        .location = null,
-        .direction = Direction.E,
-    }, &data);
-
-    // data.printMap(true);
+    try runRay(initialRay, &data);
 
     var sum: i64 = 0;
     for (data.rows.items) |row| {
@@ -173,14 +174,13 @@ pub fn part1(allocator: std.mem.Allocator, list: std.ArrayList([]const u8)) !i64
             }
         }
     }
-
     return sum;
 }
 
 fn runRay(ray: Ray, data: *Data) !void {
     // data.printMap(false);
     if (ray.step(data.*)) |newLoc| {
-        var newNode = &data.rows.items[newLoc.y].items[newLoc.x];
+        var newNode = data.get(newLoc);
 
         if (newNode.nodeType) |newNodeType| {
             _ = try newNode.energize(ray.direction);
@@ -300,27 +300,79 @@ test "part 1 full" {
 }
 
 pub fn part2(allocator: std.mem.Allocator, list: std.ArrayList([]const u8)) !i64 {
-    var sum: i64 = 0;
-
     var data = try Data.init(allocator, list);
     defer data.deinit();
 
-    // access input data...
-    // for (data.rows.items) |rowData| {
+    var maxSum: i64 = 0;
 
-    // }
+    for (0..data.rows.items.len) |y| {
+        print("y={d}\n", .{y});
+        var res = try calculate(allocator, list, Ray{
+            .location = Location{
+                .x = -1,
+                .y = @bitCast(y),
+            },
+            .direction = Direction.E,
+        });
+        if (res > maxSum) {
+            maxSum = res;
+        }
+        var res2 = try calculate(allocator, list, Ray{
+            .location = Location{
+                .x = @bitCast(data.rows.items[0].items.len),
+                .y = @bitCast(y),
+            },
+            .direction = Direction.W,
+        });
+        if (res2 > maxSum) {
+            maxSum = res2;
+        }
+    }
 
-    return sum;
+    for (0..data.rows.items[0].items.len) |x| {
+        print("x={d}\n", .{x});
+        var res = try calculate(allocator, list, Ray{
+            .location = Location{
+                .x = @bitCast(x),
+                .y = -1,
+            },
+            .direction = Direction.S,
+        });
+        if (res > maxSum) {
+            maxSum = res;
+        }
+        var res2 = try calculate(allocator, list, Ray{
+            .location = Location{
+                .x = @bitCast(x),
+                .y = @bitCast(data.rows.items.len),
+            },
+            .direction = Direction.N,
+        });
+        if (res2 > maxSum) {
+            maxSum = res2;
+        }
+    }
+
+    return maxSum;
 }
 
 test "part 2 test 1" {
     var list = try util.parseToListOfStrings([]const u8,
-        \\...
+        \\.|...\....
+        \\|.-.\.....
+        \\.....|-...
+        \\........|.
+        \\..........
+        \\.........\
+        \\..../.\\..
+        \\.-.-/..|..
+        \\.|....-|.\
+        \\..//.|....
     );
     defer list.deinit();
 
     const testValue: i64 = try part2(std.testing.allocator, list);
-    try std.testing.expectEqual(testValue, -1);
+    try std.testing.expectEqual(testValue, 51);
 }
 
 test "part 2 full" {
