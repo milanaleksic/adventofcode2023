@@ -249,7 +249,7 @@ pub fn part2(allocator: std.mem.Allocator, list: std.ArrayList([]const u8)) !usi
         data.moveToEast();
         try cycleDetection.append(data.calculate());
         if (isCycleDetectable(cycleDetection)) |cycle| {
-            print("Cycle detected: {}\n", .{cycle});
+            // print("Cycle detected: {}\n", .{cycle});
             const numerator = target - cycle.begin;
             const denominator = cycle.end - cycle.begin + 1;
             // print("numerator={d}, denominator={d}\n", .{ numerator, denominator });
