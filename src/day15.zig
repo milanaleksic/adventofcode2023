@@ -28,24 +28,28 @@ const Data = struct {
     }
 };
 
-pub fn part1(allocator: std.mem.Allocator, list: std.ArrayList([]const u8)) !i64 {
-    var sum: i64 = 0;
+pub fn part1(allocator: std.mem.Allocator, list: std.ArrayList([]const u8)) !usize {
+    var sum: usize = 0;
 
     var data = try Data.init(allocator, list);
     defer data.deinit();
 
     for (data.instructions.items) |instr| {
-        var cur: i64 = 0;
-        for (instr) |ch| {
-            cur += ch;
-            cur *= 17;
-            cur = @mod(cur, 256);
-            // std.debug.print("cur={d}\n", .{cur});
-        }
-        sum += cur;
+        sum += HASH(instr);
     }
 
     return sum;
+}
+
+fn HASH(instr: []const u8) usize {
+    var cur: usize = 0;
+    for (instr) |ch| {
+        cur += ch;
+        cur *= 17;
+        cur = @mod(cur, 256);
+        // std.debug.print("cur={d}\n", .{cur});
+    }
+    return cur;
 }
 
 test "part 1 test 0" {
@@ -54,7 +58,7 @@ test "part 1 test 0" {
     );
     defer list.deinit();
 
-    const testValue: i64 = try part1(std.testing.allocator, list);
+    const testValue: usize = try part1(std.testing.allocator, list);
     try std.testing.expectEqual(testValue, 52);
 }
 
@@ -64,7 +68,7 @@ test "part 1 test 1" {
     );
     defer list.deinit();
 
-    const testValue: i64 = try part1(std.testing.allocator, list);
+    const testValue: usize = try part1(std.testing.allocator, list);
     try std.testing.expectEqual(testValue, 1320);
 }
 
@@ -72,38 +76,108 @@ test "part 1 full" {
     var data = try util.openFile(std.testing.allocator, "data/input-15.txt");
     defer data.deinit();
 
-    const testValue: i64 = try part1(std.testing.allocator, data.lines);
+    const testValue: usize = try part1(std.testing.allocator, data.lines);
     try std.testing.expectEqual(testValue, 506869);
 }
 
-pub fn part2(allocator: std.mem.Allocator, list: std.ArrayList([]const u8)) !i64 {
-    var sum: i64 = 0;
+const Lens = struct {
+    label: []const u8,
+    value: usize,
+};
 
+const Box = struct {
+    const Self = @This();
+    list: std.ArrayList(Lens),
+    allocator: std.mem.Allocator,
+
+    pub fn init(allocator: std.mem.Allocator) !Self {
+        var list: std.ArrayList(Lens) = std.ArrayList(Lens).init(allocator);
+        return Self{
+            .list = list,
+            .allocator = allocator,
+        };
+    }
+
+    fn remove(self: *Self, label: []const u8) void {
+        for (self.list.items, 0..) |lens, i| {
+            if (std.mem.eql(u8, lens.label, label)) {
+                _ = self.list.orderedRemove(i);
+                return;
+            }
+        }
+    }
+
+    fn add(self: *Self, label: []const u8, value: usize) !void {
+        for (self.list.items) |*lens| {
+            if (std.mem.eql(u8, lens.label, label)) {
+                lens.value = value;
+                return;
+            }
+        }
+        try self.list.append(Lens{
+            .label = label,
+            .value = value,
+        });
+    }
+
+    pub fn deinit(self: *Self) void {
+        for (self.list.items) |*lens| {
+            self.allocator.free(lens);
+        }
+        self.list.deinit();
+    }
+};
+
+pub fn part2(allocator: std.mem.Allocator, list: std.ArrayList([]const u8)) !usize {
     var data = try Data.init(allocator, list);
     defer data.deinit();
 
-    // access input data...
-    // for (data.rows.items) |rowData| {
+    var boxes: [256]Box = undefined;
 
-    // }
+    for (0..256) |i| {
+        boxes[i] = try Box.init(allocator);
+    }
 
+    for (data.instructions.items) |instr| {
+        if (std.mem.indexOf(u8, instr, "-")) |loc| {
+            const label = instr[0..loc];
+            const hash = HASH(label);
+            // print("hash for {s} is {d}\n", .{ label, hash });
+            boxes[hash].remove(label);
+        } else {
+            var parts = std.mem.split(u8, instr, "=");
+            const label = parts.next().?;
+            const value = try util.toUsize(parts.next().?);
+            const hash = HASH(label);
+            // print("hash for {s} is {d}\n", .{ label, hash });
+            try boxes[hash].add(label, value);
+        }
+    }
+
+    var sum: usize = 0;
+    for (boxes, 0..) |box, i| {
+        // print("Box {d}: {any}\n", .{ i, box.list.items });
+        for (box.list.items, 1..) |lens, slot| {
+            sum += (i + 1) * slot * lens.value;
+        }
+    }
     return sum;
 }
 
 test "part 2 test 1" {
     var list = try util.parseToListOfStrings([]const u8,
-        \\...
+        \\rn=1,cm-,qp=3,cm=2,qp-,pc=4,ot=9,ab=5,pc-,pc=6,ot=7
     );
     defer list.deinit();
 
-    const testValue: i64 = try part2(std.testing.allocator, list);
-    try std.testing.expectEqual(testValue, -1);
+    const testValue: usize = try part2(std.testing.allocator, list);
+    try std.testing.expectEqual(testValue, 145);
 }
 
 test "part 2 full" {
     var data = try util.openFile(std.testing.allocator, "data/input-15.txt");
     defer data.deinit();
 
-    const testValue: i64 = try part2(std.testing.allocator, data.lines);
-    try std.testing.expectEqual(testValue, -1);
+    const testValue: usize = try part2(std.testing.allocator, data.lines);
+    try std.testing.expectEqual(testValue, 0);
 }
