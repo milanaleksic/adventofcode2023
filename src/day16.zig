@@ -306,7 +306,6 @@ pub fn part2(allocator: std.mem.Allocator, list: std.ArrayList([]const u8)) !i64
     var maxSum: i64 = 0;
 
     for (0..data.rows.items.len) |y| {
-        print("y={d}\n", .{y});
         var res = try calculate(allocator, list, Ray{
             .location = Location{
                 .x = -1,
@@ -330,7 +329,6 @@ pub fn part2(allocator: std.mem.Allocator, list: std.ArrayList([]const u8)) !i64
     }
 
     for (0..data.rows.items[0].items.len) |x| {
-        print("x={d}\n", .{x});
         var res = try calculate(allocator, list, Ray{
             .location = Location{
                 .x = @bitCast(x),
