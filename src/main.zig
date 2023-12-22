@@ -17,6 +17,7 @@ const day13 = @import("day13.zig");
 const day14 = @import("day14.zig");
 const day15 = @import("day15.zig");
 const day16 = @import("day16.zig");
+const day17 = @import("day17.zig");
 
 pub fn main() !void {
     var args = process.args();
@@ -147,6 +148,13 @@ pub fn main() !void {
             switch (part) {
                 1 => std.debug.print("Answer is {d}\n", .{try day16.part1(allocator, data.lines)}),
                 2 => std.debug.print("Answer is {d}\n", .{try day16.part2(allocator, data.lines)}),
+                else => std.debug.print("Unknown / not ready implementation for part {d}\n", .{part}),
+            }
+        },
+        17 => {
+            switch (part) {
+                1 => std.debug.print("Answer is {d}\n", .{try day17.part1(allocator, data.lines)}),
+                2 => std.debug.print("Answer is {d}\n", .{try day17.part2(allocator, data.lines)}),
                 else => std.debug.print("Unknown / not ready implementation for part {d}\n", .{part}),
             }
         },
