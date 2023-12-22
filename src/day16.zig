@@ -378,5 +378,5 @@ test "part 2 full" {
     defer data.deinit();
 
     const testValue: i64 = try part2(std.testing.allocator, data.lines);
-    try std.testing.expectEqual(testValue, -1);
+    try std.testing.expectEqual(testValue, 8314);
 }
