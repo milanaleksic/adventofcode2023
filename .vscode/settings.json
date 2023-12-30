@@ -6,5 +6,6 @@
         "**/*.idea": true,
         "**/*.*~": true,
         "flake.lock": true,
-    }
+    },
+    "editor.formatOnPaste": false
 }

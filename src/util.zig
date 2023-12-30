@@ -110,3 +110,9 @@ pub fn toUsize(str: []const u8) !usize {
 pub fn toU8(str: []const u8) !u8 {
     return try std.fmt.parseInt(u8, str, 10);
 }
+
+pub fn hasher(val1: u8, val2: u8) u64 {
+    var result = std.hash.Wyhash.init(0);
+    result.update(&[_]u8{ val1, val2 });
+    return result.final();
+}
