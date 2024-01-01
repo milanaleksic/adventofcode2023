@@ -32,29 +32,32 @@ const Data = struct {
         self.rows.deinit();
     }
 
-    pub fn printMap(self: *Self, dist: std.AutoHashMap(u64, TotalDistance)) !void {
+    pub fn printMap(self: *Self, dist: std.AutoHashMap(u64, BackTrack), minDistance: FinalDistance) !void {
         var nodesOnPath = std.AutoHashMap(u64, void).init(self.allocator);
         defer nodesOnPath.deinit();
-        const maxX: u8 = @truncate(self.rows.items[0].items.len - 1);
-        const maxY: u8 = @truncate(self.rows.items.len - 1);
-        var iterPath = Node{
-            .x = maxX,
-            .y = maxY,
-        };
+        var iterPath: NeighborCandidate = minDistance.neighbor.?;
         while (true) {
-            try nodesOnPath.put(util.hasher(iterPath.x, iterPath.y), {});
-            // print("coord={d}/{d} ({d})\n", .{ iterPath.x, iterPath.y, data.rows.items[iterPath.y].items[iterPath.x] });
-            var d = dist.get(util.hasher(iterPath.x, iterPath.y)).?;
-            if (d.previousInPath) |previous| {
-                iterPath = previous;
+            try nodesOnPath.put(util.hasher2(iterPath.neighbor.x, iterPath.neighbor.y), {});
+            // print("coord={d}/{d} ({d})\n", .{
+            //     iterPath.neighbor.x,
+            //     iterPath.neighbor.y,
+            //     self.rows.items[iterPath.neighbor.y].items[iterPath.neighbor.x],
+            // });
+            var d: BackTrack = dist.get(iterPath.hash()).?;
+            if (iterPath.neighbor.x == 0 and iterPath.neighbor.y == 0) {
+                break;
             } else {
+                iterPath = d.previous.?;
+            }
+            if (nodesOnPath.contains(util.hasher2(iterPath.neighbor.x, iterPath.neighbor.y))) {
+                std.debug.print("LOOP found, escaping", .{});
                 break;
             }
         }
         print("\n", .{});
         for (self.rows.items, 0..) |row, y| {
             for (row.items, 0..) |ch, x| {
-                if (nodesOnPath.contains(util.hasher(@truncate(x), @truncate(y)))) {
+                if (nodesOnPath.contains(util.hasher2(@truncate(x), @truncate(y)))) {
                     print("*", .{});
                 } else {
                     print("{d}", .{ch});
@@ -63,6 +66,60 @@ const Data = struct {
             print("\n", .{});
         }
     }
+
+    fn getNeighbors(self: *Self, nodeSource: QueueCandidate, maxX: usize, maxY: usize) !std.ArrayList(NeighborCandidate) {
+        var neighbors = try std.ArrayList(NeighborCandidate).initCapacity(self.allocator, 4);
+        const node = nodeSource.neighbor;
+        const allowedStepsInDirection = 3;
+        // we need to:
+        // 1. block return path
+        // 2. block more than 3 steps in a row in the same direction
+        if (node.y > 0 and nodeSource.direction != Direction.Down and (nodeSource.direction != Direction.Up or nodeSource.stepInDirection < allowedStepsInDirection)) {
+            try neighbors.append(NeighborCandidate{
+                .direction = Direction.Up,
+                .stepInDirection = if (nodeSource.direction == Direction.Up) nodeSource.stepInDirection + 1 else 1,
+                .weight = self.rows.items[node.y - 1].items[node.x],
+                .neighbor = Node{
+                    .x = node.x,
+                    .y = node.y - 1,
+                },
+            });
+        }
+        if (node.x > 0 and nodeSource.direction != Direction.Right and (nodeSource.direction != Direction.Left or nodeSource.stepInDirection < allowedStepsInDirection)) {
+            try neighbors.append(NeighborCandidate{
+                .direction = Direction.Left,
+                .stepInDirection = if (nodeSource.direction == Direction.Left) nodeSource.stepInDirection + 1 else 1,
+                .weight = self.rows.items[node.y].items[node.x - 1],
+                .neighbor = Node{
+                    .x = node.x - 1,
+                    .y = node.y,
+                },
+            });
+        }
+        if (node.y < maxY and nodeSource.direction != Direction.Up and (nodeSource.direction != Direction.Down or nodeSource.stepInDirection < allowedStepsInDirection)) {
+            try neighbors.append(NeighborCandidate{
+                .direction = Direction.Down,
+                .stepInDirection = if (nodeSource.direction == Direction.Down) nodeSource.stepInDirection + 1 else 1,
+                .weight = self.rows.items[node.y + 1].items[node.x],
+                .neighbor = Node{
+                    .x = node.x,
+                    .y = node.y + 1,
+                },
+            });
+        }
+        if (node.x < maxX and nodeSource.direction != Direction.Left and (nodeSource.direction != Direction.Right or nodeSource.stepInDirection < allowedStepsInDirection)) {
+            try neighbors.append(NeighborCandidate{
+                .direction = Direction.Right,
+                .stepInDirection = if (nodeSource.direction == Direction.Right) nodeSource.stepInDirection + 1 else 1,
+                .weight = self.rows.items[node.y].items[node.x + 1],
+                .neighbor = Node{
+                    .x = node.x + 1,
+                    .y = node.y,
+                },
+            });
+        }
+        return neighbors;
+    }
 };
 
 const Node = struct {
@@ -70,17 +127,37 @@ const Node = struct {
     y: u8,
 };
 
-const NodeDistance = struct {
-    distance: i64,
+const NeighborCandidate = struct {
     neighbor: Node,
+    weight: u16 = 0,
+    direction: Direction,
+    stepInDirection: u8,
+
+    fn hash(self: NeighborCandidate) u64 {
+        return util.hasher4(self.neighbor.x, self.neighbor.y, @intFromEnum(self.direction), self.stepInDirection);
+    }
 };
 
-const TotalDistance = struct {
+const QueueCandidate = struct {
+    neighbor: Node,
+    distance: u16 = 0,
+    direction: Direction,
+    stepInDirection: u8,
+};
+
+const Direction = enum { Down, Up, Right, Left };
+
+const FinalDistance = struct {
     distance: i64,
-    previousInPath: ?Node,
+    neighbor: ?NeighborCandidate,
 };
 
-fn lessThan(context: void, a: NodeDistance, b: NodeDistance) std.math.Order {
+const BackTrack = struct {
+    distance: i64,
+    previous: ?NeighborCandidate = null,
+};
+
+fn lessThan(context: void, a: QueueCandidate, b: QueueCandidate) std.math.Order {
     _ = context;
     return std.math.order(a.distance, b.distance);
 }
@@ -128,85 +205,132 @@ pub fn part1(allocator: std.mem.Allocator, list: std.ArrayList([]const u8)) !i64
     var data = try Data.init(allocator, list);
     defer data.deinit();
 
-    var queue = std.PriorityQueue(NodeDistance, void, lessThan).init(allocator, {});
+    var queue = std.PriorityQueue(QueueCandidate, void, lessThan).init(allocator, {});
     defer queue.deinit();
 
-    try queue.add(NodeDistance{ .distance = 0, .neighbor = Node{
-        .x = 0,
-        .y = 0,
-    } });
+    try queue.add(QueueCandidate{
+        .distance = data.rows.items[0].items[1],
+        .neighbor = Node{
+            .x = 1,
+            .y = 0,
+        },
+        .direction = Direction.Right,
+        .stepInDirection = 1,
+    });
+    try queue.add(QueueCandidate{
+        .distance = data.rows.items[1].items[0],
+        .neighbor = Node{
+            .x = 0,
+            .y = 1,
+        },
+        .direction = Direction.Down,
+        .stepInDirection = 1,
+    });
 
-    var dist = std.AutoHashMap(u64, TotalDistance).init(allocator);
+    var dist = std.AutoHashMap(u64, BackTrack).init(allocator);
     defer dist.deinit();
 
-    for (data.rows.items, 0..) |row, y| {
-        for (row.items, 0..) |_, x| {
-            try dist.put(util.hasher(@truncate(x), @truncate(y)), TotalDistance{
-                .distance = std.math.maxInt(i64),
-                .previousInPath = null,
-            });
-        }
-    }
-    try dist.put(util.hasher(0, 0), TotalDistance{
+    // add 2 possible start states and mark them as zero-distance
+    try dist.put(util.hasher5(0, 0, 0, @intFromEnum(Direction.Down), 0), BackTrack{
+        .previous = null,
         .distance = 0,
-        .previousInPath = null,
+    });
+    try dist.put(util.hasher5(0, 0, 0, @intFromEnum(Direction.Right), 0), BackTrack{
+        .previous = null,
+        .distance = 0,
     });
 
     const maxX: u8 = @truncate(data.rows.items[0].items.len - 1);
     const maxY: u8 = @truncate(data.rows.items.len - 1);
 
+    var minDistance: FinalDistance = FinalDistance{
+        .distance = std.math.maxInt(i64),
+        .neighbor = null,
+    };
+
     while (queue.len > 0) {
         const d = queue.remove();
-        const currentNode = d.neighbor;
         const currentDistance = d.distance;
-        if (currentDistance > dist.get(util.hasher(currentNode.x, currentNode.y)).?.distance) {
+        if (currentDistance > minDistance.distance) {
             continue;
         }
-        const neighbors = try getNeighbors(allocator, currentNode, maxX, maxY);
+        const neighbors = try data.getNeighbors(d, maxX, maxY);
         defer neighbors.deinit();
 
-        for (neighbors.items) |neighbor| {
-            const weight = data.rows.items[neighbor.y].items[neighbor.x];
-            const distance = currentDistance + weight;
-            if (distance < dist.get(util.hasher(neighbor.x, neighbor.y)).?.distance) {
-                try dist.put(util.hasher(neighbor.x, neighbor.y), TotalDistance{
+        for (neighbors.items) |neighborDistance| {
+            const neighbor = neighborDistance.neighbor;
+            const distance = currentDistance + neighborDistance.weight;
+            var candidate = dist.get(neighborDistance.hash());
+            if (candidate == null or distance < candidate.?.distance) {
+                // std.debug.print("Shortest on {} is to {} [neighbor.direction={}, stepInDirection={d}] (current={d} + neighbor.weight={d} => distance={d})\n", .{
+                //     d.neighbor,
+                //     neighborDistance.neighbor,
+                //     neighborDistance.direction,
+                //     neighborDistance.stepInDirection,
+                //     currentDistance,
+                //     neighborDistance.weight,
+                //     distance,
+                // });
+                try dist.put(neighborDistance.hash(), BackTrack{
                     .distance = distance,
-                    .previousInPath = currentNode,
+                    .previous = NeighborCandidate{
+                        .weight = d.distance,
+                        .neighbor = Node{
+                            .x = d.neighbor.x,
+                            .y = d.neighbor.y,
+                        },
+                        .direction = d.direction,
+                        .stepInDirection = d.stepInDirection,
+                    },
                 });
-                try queue.add(NodeDistance{ .distance = distance, .neighbor = Node{
-                    .x = neighbor.x,
-                    .y = neighbor.y,
-                } });
+                try queue.add(QueueCandidate{
+                    .distance = distance,
+                    .neighbor = Node{
+                        .x = neighbor.x,
+                        .y = neighbor.y,
+                    },
+                    .direction = neighborDistance.direction,
+                    .stepInDirection = neighborDistance.stepInDirection,
+                });
+                if (neighbor.x == maxX and neighbor.y == maxY and minDistance.distance > distance) {
+                    minDistance = FinalDistance{
+                        .neighbor = neighborDistance,
+                        .distance = distance,
+                    };
+                }
             }
         }
     }
 
-    try data.printMap(dist);
+    try data.printMap(dist, minDistance);
 
-    return dist.get(util.hasher(maxX, maxY)).?.distance;
+    return minDistance.distance;
 }
 
-fn getNeighbors(allocator: std.mem.Allocator, node: Node, maxX: usize, maxY: usize) !std.ArrayList(Node) {
-    var neighbors = try std.ArrayList(Node).initCapacity(allocator, 3);
-    if (node.y > 0) {
-        try neighbors.append(Node{
-            .x = node.x,
-            .y = node.y - 1,
-        });
-    }
-    if (node.y < maxY) {
-        try neighbors.append(Node{
-            .x = node.x,
-            .y = node.y + 1,
-        });
-    }
-    if (node.x < maxX) {
-        try neighbors.append(Node{
-            .x = node.x + 1,
-            .y = node.y,
-        });
-    }
-    return neighbors;
+test "part 1 test 0.1" {
+    var list = try util.parseToListOfStrings([]const u8,
+        \\119999
+        \\951111
+        \\999991
+        \\999991
+        \\999991
+    );
+    defer list.deinit();
+
+    const testValue: i64 = try part1(std.testing.allocator, list);
+    try std.testing.expectEqual(testValue, 17);
+}
+
+test "part 1 test 0.2" {
+    var list = try util.parseToListOfStrings([]const u8,
+        \\14999
+        \\23111
+        \\99991
+    );
+    defer list.deinit();
+
+    const testValue: i64 = try part1(std.testing.allocator, list);
+    try std.testing.expectEqual(testValue, 11);
 }
 
 test "part 1 test 1" {
@@ -236,6 +360,7 @@ test "part 1 full" {
     defer data.deinit();
 
     const testValue: i64 = try part1(std.testing.allocator, data.lines);
+    // 725 is too high
     try std.testing.expectEqual(testValue, -1);
 }
 

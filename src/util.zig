@@ -111,8 +111,20 @@ pub fn toU8(str: []const u8) !u8 {
     return try std.fmt.parseInt(u8, str, 10);
 }
 
-pub fn hasher(val1: u8, val2: u8) u64 {
+pub fn hasher2(val1: u8, val2: u8) u64 {
     var result = std.hash.Wyhash.init(0);
     result.update(&[_]u8{ val1, val2 });
+    return result.final();
+}
+
+pub fn hasher4(val1: u8, val2: u8, val3: u8, val4: u8) u64 {
+    var result = std.hash.Wyhash.init(0);
+    result.update(&[_]u8{ val1, val2, val3, val4 });
+    return result.final();
+}
+
+pub fn hasher5(val1: u16, val2: u8, val3: u8, val4: u8, val5: u8) u64 {
+    var result = std.hash.Wyhash.init(0);
+    result.update(&[_]u8{ @intCast(val1 >> 8 & 0xff), @intCast(val1 & 0xff), val2, val3, val4, val5 });
     return result.final();
 }
