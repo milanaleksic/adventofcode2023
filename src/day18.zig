@@ -3,6 +3,12 @@ const util = @import("util.zig");
 const mem = std.mem;
 const print = std.debug.print;
 
+// Note: for this solution I had to reach out for help, since obvious solutions do not scale:
+// 1. counting area rectangles
+// 2. reuse solution from day 10
+//
+// For more information please read "countHoles" method
+
 const Coord = struct {
     x: i64,
     y: i64,
