@@ -4,7 +4,7 @@ const util = @import("util.zig");
 const mem = std.mem;
 const print = std.debug.print;
 
-// Note: for this one I had to reach out for help since I detected a cycle
+// Note: for this one I had to reach out for help for the part 2 since I detected a cycle
 // but couldn't figure out the methodology to do something with it (LCM)
 
 const Node = struct {

@@ -3,7 +3,7 @@ const util = @import("util.zig");
 const mem = std.mem;
 const print = std.debug.print;
 
-// Note: for this solution I had to reach out for help, since obvious solutions do not scale:
+// Note: for this solution I had to reach out for help for the part 2, since obvious solutions do not scale:
 // 1. counting area rectangles
 // 2. reuse solution from day 10
 //
@@ -85,7 +85,7 @@ const Data = struct {
     }
 
     pub fn countHoles(self: *Self) i64 {
-        // Pick's theorem says: A = i + b/2 - 1, where:
+        // Pick's theorem (https://en.wikipedia.org/wiki/Pick%27s_theorem) says: A = i + b/2 - 1, where:
         // A - area behind the polygon
         // b - number of integer points on the polygon
         // i - number of integer points inside the polygon

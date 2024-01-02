@@ -28,3 +28,8 @@ zig-out/bin/adventofcode2023:
 - [x] named structs as function results in day2
 - [x] use test allocator in prod code as arg to verify no leaks occur
 - [x] try different allocators (arena maybe?)
+
+## Days I reached out for help
+
+- day 8, part 2 (decision to use LCM)
+- day 18, part 2 (Pick's theorem and Shoelace formula)
