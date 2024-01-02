@@ -23,199 +23,89 @@ const Data = struct {
     const Self = @This();
     allocator: std.mem.Allocator,
 
-    rows: std.ArrayList(std.ArrayList(Ground)),
+    coords: std.ArrayList(Coord),
+    numberOfSteps: i64,
 
     pub fn init(allocator: std.mem.Allocator, list: std.ArrayList([]const u8)) !Self {
-        var preliminaryList = std.ArrayList(Coord).init(allocator);
-        defer preliminaryList.deinit();
-
+        var coords = std.ArrayList(Coord).init(allocator);
         var coord = Coord{ .x = 0, .y = 0 };
+        var numberOfSteps: i64 = 0;
         for (list.items) |line| {
             // print("line={s}\n", .{line});
             var sliceIter = std.mem.split(u8, line, " ");
             const command = sliceIter.next().?;
-            const amount = try util.toUsize(sliceIter.next().?);
-            for (0..amount) |_| {
-                switch (command[0]) {
-                    'U' => coord.y -= 1,
-                    'D' => coord.y += 1,
-                    'L' => coord.x -= 1,
-                    'R' => coord.x += 1,
-                    else => undefined,
-                }
-                try preliminaryList.append(coord);
+            const amount = try util.toI64(sliceIter.next().?);
+            switch (command[0]) {
+                'U' => coord.y -= amount,
+                'D' => coord.y += amount,
+                'L' => coord.x -= amount,
+                'R' => coord.x += amount,
+                else => undefined,
             }
+            numberOfSteps += amount;
+            try coords.append(coord);
         }
 
         // shift all nodes to absolute values for simplicity
         var minX: i64 = 0;
         var minY: i64 = 0;
-        var maxX: i64 = 0;
-        var maxY: i64 = 0;
-        for (preliminaryList.items) |coordIter| {
+        for (coords.items) |coordIter| {
             if (coordIter.x < minX) {
                 minX = coordIter.x;
             }
             if (coordIter.y < minY) {
                 minY = coordIter.y;
             }
-            if (coordIter.x > maxX) {
-                maxX = coordIter.x;
-            }
-            if (coordIter.y > maxY) {
-                maxY = coordIter.y;
-            }
         }
 
-        maxX -= minX;
-        maxY -= minY;
-
-        var rows = std.ArrayList(std.ArrayList(Ground)).init(allocator);
-        for (0..@bitCast(maxY + 1)) |_| {
-            var row = std.ArrayList(Ground).init(allocator);
-            for (0..@bitCast(maxX + 1)) |_| {
-                try row.append(.{});
+        if (minX < 0 or minY < 0) {
+            for (coords.items) |*coordFinal| {
+                if (minX < 0) {
+                    coordFinal.x -= minX;
+                }
+                if (minY < 0) {
+                    coordFinal.y -= minY;
+                }
             }
-            try rows.append(row);
-        }
-
-        for (preliminaryList.items) |*coordFinal| {
-            if (minX < 0) {
-                coordFinal.x -= minX;
-            }
-            if (minY < 0) {
-                coordFinal.y -= minY;
-            }
-            rows.items[@bitCast(coordFinal.y)].items[@bitCast(coordFinal.x)].dig = Dig.Hole;
         }
 
         return Self{
             .allocator = allocator,
-            .rows = rows,
+            .numberOfSteps = numberOfSteps,
+            .coords = coords,
         };
     }
 
-    pub fn checkEscapes(self: *Self, x: usize, y: usize, depth: usize) ?bool {
-        const this = &self.rows.items[y].items[x];
-        if (this.escapes) |escapes| {
-            return escapes;
-        }
-        if (this.visited or depth == MaxDepth) {
-            return this.escapes;
-        } else {
-            this.visited = true;
-        }
-        if (this.dig == Dig.Hole) {
-            this.escapes = false;
-            return false;
-        }
-        if (x > 0) {
-            if (self.checkEscapes(x - 1, y, depth + 1) orelse false) {
-                this.escapes = true;
-            }
-        } else {
-            this.escapes = true;
-        }
-        if (y > 0) {
-            if (self.checkEscapes(x, y - 1, depth + 1) orelse false) {
-                this.escapes = true;
-            }
-        } else {
-            this.escapes = true;
-        }
-        if (y < self.rows.items.len - 1) {
-            if (self.checkEscapes(x, y + 1, depth + 1) orelse false) {
-                this.escapes = true;
-            }
-        } else {
-            this.escapes = true;
-        }
-        if (x < self.rows.items[0].items.len - 1) {
-            if (self.checkEscapes(x + 1, y, depth + 1) orelse false) {
-                this.escapes = true;
-            }
-        } else {
-            this.escapes = true;
-        }
-        return this.escapes;
-    }
-
     pub fn deinit(self: *Self) void {
-        for (self.rows.items) |row| {
-            row.deinit();
-        }
-        self.rows.deinit();
-    }
-
-    pub fn printMap(self: *Self) void {
-        print("\n", .{});
-        for (self.rows.items) |row| {
-            for (row.items) |n| {
-                var ch: u8 = undefined;
-                switch (n.dig) {
-                    Dig.Surface => {
-                        ch = '?';
-                        if (n.escapes) |escapesRaw| {
-                            ch = if (escapesRaw) ' ' else '#';
-                        }
-                    },
-                    Dig.Hole => ch = '*',
-                }
-                print("{c}", .{ch});
-            }
-            print("\n", .{});
-        }
+        self.coords.deinit();
     }
 
     pub fn countHoles(self: *Self) i64 {
-        var count: i64 = 0;
-        for (self.rows.items) |row| {
-            for (row.items) |cell| {
-                if ((cell.dig == Dig.Hole) or (cell.escapes == null)) {
-                    count += 1;
-                }
-            }
+        // Pick's theorem says: A = i + b/2 - 1, where:
+        // A - area behind the polygon
+        // b - number of integer points on the polygon
+        // i - number of integer points inside the polygon
+        //
+        // Day 18 asks for (i + b), so we get: i + b = A + b/2 + 1
+        // - b is easy (number of steps in the polygon building instructions)
+        // - A we can get from https://en.wikipedia.org/wiki/Shoelace_formula
+        var doubleA: i64 = 0;
+        for (0..self.coords.items.len) |i| {
+            const previousY = if (i == 0) self.coords.items.len - 1 else i - 1;
+            const nextY = if (i == self.coords.items.len - 1) 0 else i + 1;
+            doubleA += self.coords.items[i].x * (self.coords.items[nextY].y - self.coords.items[previousY].y);
         }
-        return count;
+        var a = @divTrunc(doubleA, 2);
+
+        return a + @divTrunc(self.numberOfSteps, 2) + 1;
     }
 };
-
-const MaxDepth = 255;
-const MaxIterations = 20;
 
 pub fn part1(allocator: std.mem.Allocator, list: std.ArrayList([]const u8)) !i64 {
     var data = try Data.init(allocator, list);
     defer data.deinit();
 
-    // data.printMap();
-
-    // loop until solution is found
-    var holeCount: i64 = 0;
-    for (0..MaxIterations) |iter| {
-        for (data.rows.items) |row| {
-            for (row.items) |*cell| {
-                cell.visited = false;
-            }
-        }
-        for (data.rows.items, 0..) |row, y| {
-            for (row.items, 0..) |_, x| {
-                if (data.checkEscapes(x, y, 0) orelse false) {
-                    data.rows.items[y].items[x].dig = Dig.Surface;
-                }
-            }
-        }
-        var newCount = data.countHoles();
-        if (newCount == holeCount) {
-            std.debug.print("Breaking after {d} loops\n", .{iter});
-            break;
-        } else {
-            holeCount = newCount;
-        }
-    }
-
-    // data.printMap();
-
-    return holeCount;
+    return data.countHoles();
 }
 
 test "part 1 test 1" {
@@ -247,7 +137,7 @@ test "part 1 full" {
 
     // 55507 is too high
     const testValue: i64 = try part1(std.testing.allocator, data.lines);
-    try std.testing.expectEqual(testValue, -1);
+    try std.testing.expectEqual(testValue, 52231);
 }
 
 pub fn part2(allocator: std.mem.Allocator, list: std.ArrayList([]const u8)) !i64 {
