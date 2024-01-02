@@ -26,7 +26,7 @@ const Data = struct {
     coords: std.ArrayList(Coord),
     numberOfSteps: i64,
 
-    pub fn init(allocator: std.mem.Allocator, list: std.ArrayList([]const u8)) !Self {
+    pub fn initPart1(allocator: std.mem.Allocator, list: std.ArrayList([]const u8)) !Self {
         var coords = std.ArrayList(Coord).init(allocator);
         var coord = Coord{ .x = 0, .y = 0 };
         var numberOfSteps: i64 = 0;
@@ -40,6 +40,61 @@ const Data = struct {
                 'D' => coord.y += amount,
                 'L' => coord.x -= amount,
                 'R' => coord.x += amount,
+                else => undefined,
+            }
+            numberOfSteps += amount;
+            try coords.append(coord);
+        }
+
+        // shift all nodes to absolute values for simplicity
+        var minX: i64 = 0;
+        var minY: i64 = 0;
+        for (coords.items) |coordIter| {
+            if (coordIter.x < minX) {
+                minX = coordIter.x;
+            }
+            if (coordIter.y < minY) {
+                minY = coordIter.y;
+            }
+        }
+
+        if (minX < 0 or minY < 0) {
+            for (coords.items) |*coordFinal| {
+                if (minX < 0) {
+                    coordFinal.x -= minX;
+                }
+                if (minY < 0) {
+                    coordFinal.y -= minY;
+                }
+            }
+        }
+
+        return Self{
+            .allocator = allocator,
+            .numberOfSteps = numberOfSteps,
+            .coords = coords,
+        };
+    }
+
+    pub fn initPart2(allocator: std.mem.Allocator, list: std.ArrayList([]const u8)) !Self {
+        var coords = std.ArrayList(Coord).init(allocator);
+        var coord = Coord{ .x = 0, .y = 0 };
+        var numberOfSteps: i64 = 0;
+        for (list.items) |line| {
+            // print("line={s}\n", .{line});
+            var sliceIter = std.mem.split(u8, line, " ");
+            // ignore first
+            _ = sliceIter.next().?;
+            // ignore second
+            _ = sliceIter.next().?;
+            const encodedInstruction = sliceIter.next().?;
+            // std.debug.print("Decoding {s}\n", .{encodedInstruction[2..7]});
+            const amount = try std.fmt.parseInt(i64, encodedInstruction[2..7], 16);
+            switch (encodedInstruction[7]) {
+                '3' => coord.y -= amount,
+                '1' => coord.y += amount,
+                '2' => coord.x -= amount,
+                '0' => coord.x += amount,
                 else => undefined,
             }
             numberOfSteps += amount;
@@ -102,7 +157,7 @@ const Data = struct {
 };
 
 pub fn part1(allocator: std.mem.Allocator, list: std.ArrayList([]const u8)) !i64 {
-    var data = try Data.init(allocator, list);
+    var data = try Data.initPart1(allocator, list);
     defer data.deinit();
 
     return data.countHoles();
@@ -135,33 +190,38 @@ test "part 1 full" {
     var data = try util.openFile(std.testing.allocator, "data/input-18.txt");
     defer data.deinit();
 
-    // 55507 is too high
     const testValue: i64 = try part1(std.testing.allocator, data.lines);
     try std.testing.expectEqual(testValue, 52231);
 }
 
 pub fn part2(allocator: std.mem.Allocator, list: std.ArrayList([]const u8)) !i64 {
-    var sum: i64 = 0;
-
-    var data = try Data.init(allocator, list);
+    var data = try Data.initPart2(allocator, list);
     defer data.deinit();
 
-    // access input data...
-    // for (data.rows.items) |rowData| {
-
-    // }
-
-    return sum;
+    return data.countHoles();
 }
 
 test "part 2 test 1" {
     var list = try util.parseToListOfStrings([]const u8,
-        \\...
+        \\R 6 (#70c710)
+        \\D 5 (#0dc571)
+        \\L 2 (#5713f0)
+        \\D 2 (#d2c081)
+        \\R 2 (#59c680)
+        \\D 2 (#411b91)
+        \\L 5 (#8ceee2)
+        \\U 2 (#caa173)
+        \\L 1 (#1b58a2)
+        \\U 2 (#caa171)
+        \\R 2 (#7807d2)
+        \\U 3 (#a77fa3)
+        \\L 2 (#015232)
+        \\U 2 (#7a21e3)
     );
     defer list.deinit();
 
     const testValue: i64 = try part2(std.testing.allocator, list);
-    try std.testing.expectEqual(testValue, -1);
+    try std.testing.expectEqual(testValue, 952408144115);
 }
 
 test "part 2 full" {
@@ -169,5 +229,5 @@ test "part 2 full" {
     defer data.deinit();
 
     const testValue: i64 = try part2(std.testing.allocator, data.lines);
-    try std.testing.expectEqual(testValue, -1);
+    try std.testing.expectEqual(testValue, 57196493937398);
 }
