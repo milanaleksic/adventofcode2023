@@ -3,17 +3,6 @@ const util = @import("util.zig");
 const mem = std.mem;
 const print = std.debug.print;
 
-const Dig = enum {
-    Surface,
-    Hole,
-};
-
-const Ground = struct {
-    dig: Dig = Dig.Surface,
-    escapes: ?bool = null,
-    visited: bool = false,
-};
-
 const Coord = struct {
     x: i64,
     y: i64,
@@ -46,29 +35,6 @@ const Data = struct {
             try coords.append(coord);
         }
 
-        // shift all nodes to absolute values for simplicity
-        var minX: i64 = 0;
-        var minY: i64 = 0;
-        for (coords.items) |coordIter| {
-            if (coordIter.x < minX) {
-                minX = coordIter.x;
-            }
-            if (coordIter.y < minY) {
-                minY = coordIter.y;
-            }
-        }
-
-        if (minX < 0 or minY < 0) {
-            for (coords.items) |*coordFinal| {
-                if (minX < 0) {
-                    coordFinal.x -= minX;
-                }
-                if (minY < 0) {
-                    coordFinal.y -= minY;
-                }
-            }
-        }
-
         return Self{
             .allocator = allocator,
             .numberOfSteps = numberOfSteps,
@@ -99,29 +65,6 @@ const Data = struct {
             }
             numberOfSteps += amount;
             try coords.append(coord);
-        }
-
-        // shift all nodes to absolute values for simplicity
-        var minX: i64 = 0;
-        var minY: i64 = 0;
-        for (coords.items) |coordIter| {
-            if (coordIter.x < minX) {
-                minX = coordIter.x;
-            }
-            if (coordIter.y < minY) {
-                minY = coordIter.y;
-            }
-        }
-
-        if (minX < 0 or minY < 0) {
-            for (coords.items) |*coordFinal| {
-                if (minX < 0) {
-                    coordFinal.x -= minX;
-                }
-                if (minY < 0) {
-                    coordFinal.y -= minY;
-                }
-            }
         }
 
         return Self{
