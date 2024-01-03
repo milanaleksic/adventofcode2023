@@ -64,45 +64,6 @@ const Evaluation = struct {
         return null;
     }
 
-    pub fn visitAcceptRanges(self: Self, allFeatureRanges: *std.ArrayList(std.ArrayList(FeatureRange)), ongoingFilters: std.ArrayList(FeatureRange)) !void {
-        if (self.feature) |featureRaw| {
-            switch (self.outcome.outcomeType) {
-                OutcomeType.Accept => {
-                    var newOngoingFilters = try self.copyFeatureRanges(ongoingFilters);
-                    if (self.outcome.outcomeType != OutcomeType.Accept) {
-                        defer {
-                            for (newOngoingFilters.items) |filter| {
-                                filter.ranges.deinit();
-                            }
-                            newOngoingFilters.deinit();
-                        }
-                    }
-                    for (newOngoingFilters.items) |*ongoingFilter| {
-                        if (ongoingFilter.feature == featureRaw) {
-                            try ongoingFilter.filter(self.operation.?, self.value.?);
-                        }
-                    }
-                    if (self.outcome.outcomeType == OutcomeType.Accept) {
-                        try allFeatureRanges.append(newOngoingFilters);
-                    }
-                },
-                else => @panic("not yet implemented"),
-            }
-        } else {
-            if (self.outcome.outcomeType == OutcomeType.Accept) {
-                try allFeatureRanges.append(try self.copyFeatureRanges(ongoingFilters));
-            }
-        }
-    }
-
-    fn copyFeatureRanges(self: Self, ongoingFilters: std.ArrayList(FeatureRange)) !std.ArrayList(FeatureRange) {
-        var newFeatureRange = std.ArrayList(FeatureRange).init(self.allocator);
-        for (ongoingFilters.items) |filter| {
-            try newFeatureRange.append(try FeatureRange.copyFrom(filter));
-        }
-        return newFeatureRange;
-    }
-
     pub fn visitPath(self: Self, data: Data, allPaths: *std.ArrayList(WorkflowPath), ongoingPath: WorkflowPath) std.mem.Allocator.Error!WorkflowPath {
         var newPath = try ongoingPath.dupe();
         if (self.feature) |featureRaw| {
@@ -112,15 +73,16 @@ const Evaluation = struct {
                 .value = self.value,
             });
         }
-        if (self.outcome.outcomeType == OutcomeType.Accept or self.outcome.outcomeType == OutcomeType.Reject) {
-            // path is finished
-            newPath.outcomeType = self.outcome.outcomeType;
-            try allPaths.append(newPath);
-        } else {
-            // path continues into another workflow
-            var nextWorkflow: Workflow = data.workflows.get(self.outcome.targetWorkflowName.?).?;
-            try nextWorkflow.visitPath(data, allPaths, newPath);
+        switch (self.outcome.outcomeType) {
+            OutcomeType.Accept => try allPaths.append(newPath),
+            OutcomeType.Reject => newPath.deinit(),
+            OutcomeType.MoveToAnotherWorkflow => {
+                // path continues into another workflow
+                var nextWorkflow: Workflow = data.workflows.get(self.outcome.targetWorkflowName.?).?;
+                try nextWorkflow.visitPath(data, allPaths, newPath);
+            },
         }
+        // add negative case of this evaluation into answer, to build next workflow step
         var returnPath = try ongoingPath.dupe();
         if (self.feature) |featureRaw| {
             try returnPath.path.append(FeatureSelectionCriteria{
@@ -149,12 +111,6 @@ const Workflow = struct {
             }
         }
         @panic("unexpected state: no outcome reached");
-    }
-
-    pub fn visitAcceptRanges(self: Self, allFeatureRanges: *std.ArrayList(std.ArrayList(FeatureRange)), ongoingFilters: std.ArrayList(FeatureRange)) !void {
-        for (self.evaluations.items) |evaluation| {
-            try evaluation.visitAcceptRanges(allFeatureRanges, ongoingFilters);
-        }
     }
 
     pub fn visitPath(self: Self, data: Data, allPaths: *std.ArrayList(WorkflowPath), ongoingPath: WorkflowPath) !void {
@@ -228,7 +184,6 @@ const Data = struct {
             if (std.mem.indexOf(u8, split, ":")) |designatorChar| {
                 var ingress = split[designatorChar + 1 ..];
                 var evaluation = parseEvaluation(allocator, ingress);
-
                 var workflowEvaluation = split[0..designatorChar];
                 if (workflowEvaluation[1] == '>') {
                     evaluation.operation = Operation.GreaterThan;
@@ -316,12 +271,8 @@ pub fn part1(allocator: std.mem.Allocator, list: std.ArrayList([]const u8)) !usi
                     sum += item.featureSum();
                     break;
                 },
-                OutcomeType.Reject => {
-                    break;
-                },
-                OutcomeType.MoveToAnotherWorkflow => {
-                    workflowIter = data.workflows.get(outcome.targetWorkflowName.?).?;
-                },
+                OutcomeType.Reject => break,
+                OutcomeType.MoveToAnotherWorkflow => workflowIter = data.workflows.get(outcome.targetWorkflowName.?).?,
             }
         }
     }
@@ -360,7 +311,7 @@ test "part 1 full" {
     defer data.deinit();
 
     const testValue: usize = try part1(std.testing.allocator, data.lines);
-    try std.testing.expectEqual(testValue, 0);
+    try std.testing.expectEqual(testValue, 377025);
 }
 
 const Range = struct {
@@ -371,76 +322,50 @@ const Range = struct {
 const FeatureRange = struct {
     const Self = @This();
     feature: Feature,
-    // TODO: simplify to a single range
-    ranges: std.ArrayList(Range),
-    allocator: std.mem.Allocator,
+    range: ?Range,
 
-    pub fn init(allocator: std.mem.Allocator, feature: Feature) !Self {
-        var ranges = std.ArrayList(Range).init(allocator);
-        try ranges.append(Range{ .start = 1, .end = 4000 });
+    pub fn init(feature: Feature) !Self {
         return Self{
             .feature = feature,
-            .ranges = ranges,
-            .allocator = allocator,
-        };
-    }
-
-    pub fn copyFrom(other: FeatureRange) !Self {
-        var ranges = std.ArrayList(Range).init(other.allocator);
-        for (other.ranges.items) |range| {
-            try ranges.append(range);
-        }
-        return FeatureRange{
-            .feature = other.feature,
-            .allocator = other.allocator,
-            .ranges = ranges,
+            .range = Range{ .start = 1, .end = 4000 },
         };
     }
 
     pub fn filter(self: *Self, operation: Operation, value: usize) !void {
-        var newRanges = std.ArrayList(Range).init(self.allocator);
-        for (self.ranges.items) |range| {
-            // if range is not impacted, just copy it
-            if ((range.start > value and operation == Operation.GreaterThan) or
-                (range.end < value and operation == Operation.LessThan) or
-                (range.start >= value and operation == Operation.GreaterThanOrEqual) or
-                (range.end <= value and operation == Operation.LessThanOrEqual))
-            {
-                try newRanges.append(range);
-                continue;
-            }
-            // if range is missing entire range, skip it
-            if ((value <= range.start and operation == Operation.LessThan) or
-                (value >= range.end and operation == Operation.GreaterThan) or
-                (value < range.start and operation == Operation.LessThanOrEqual) or
-                (value > range.end and operation == Operation.GreaterThanOrEqual))
-            {
-                continue;
-            }
-            // if range is covering partial range, change the range boundaries
-            if (value > range.start and operation == Operation.LessThan) {
-                try newRanges.append(Range{ .start = range.start, .end = value - 1 });
-                continue;
-            }
-            if (value < range.end and operation == Operation.GreaterThan) {
-                try newRanges.append(Range{ .start = value + 1, .end = range.end });
-                continue;
-            }
-            if (value >= range.start and operation == Operation.LessThanOrEqual) {
-                try newRanges.append(Range{ .start = range.start, .end = value });
-                continue;
-            }
-            if (value <= range.end and operation == Operation.GreaterThanOrEqual) {
-                try newRanges.append(Range{ .start = value, .end = range.end });
-                continue;
-            }
+        const range = self.range.?;
+        // if range is not impacted, just copy it
+        if ((range.start > value and operation == Operation.GreaterThan) or
+            (range.end < value and operation == Operation.LessThan) or
+            (range.start >= value and operation == Operation.GreaterThanOrEqual) or
+            (range.end <= value and operation == Operation.LessThanOrEqual))
+        {
+            return;
         }
-        self.ranges.deinit();
-        self.ranges = newRanges;
-    }
-
-    pub fn deinit(self: *Self) void {
-        self.ranges.deinit();
+        // if range is missing entire range, skip it
+        if ((value <= range.start and operation == Operation.LessThan) or
+            (value >= range.end and operation == Operation.GreaterThan) or
+            (value < range.start and operation == Operation.LessThanOrEqual) or
+            (value > range.end and operation == Operation.GreaterThanOrEqual))
+        {
+            self.range = null;
+        }
+        // if range is covering partial range, change the range boundaries
+        if (value > range.start and operation == Operation.LessThan) {
+            self.range = Range{ .start = range.start, .end = value - 1 };
+            return;
+        }
+        if (value < range.end and operation == Operation.GreaterThan) {
+            self.range = Range{ .start = value + 1, .end = range.end };
+            return;
+        }
+        if (value >= range.start and operation == Operation.LessThanOrEqual) {
+            self.range = Range{ .start = range.start, .end = value };
+            return;
+        }
+        if (value <= range.end and operation == Operation.GreaterThanOrEqual) {
+            self.range = Range{ .start = value, .end = range.end };
+            return;
+        }
     }
 };
 
@@ -461,7 +386,6 @@ const FeatureSelectionCriteria = struct {
 const WorkflowPath = struct {
     const Self = @This();
     path: std.ArrayList(FeatureSelectionCriteria),
-    outcomeType: ?OutcomeType = null,
     allocator: std.mem.Allocator,
 
     pub fn init(allocator: std.mem.Allocator) !Self {
@@ -480,7 +404,6 @@ const WorkflowPath = struct {
         for (self.path.items) |step| {
             try newPath.path.append(step);
         }
-        newPath.outcomeType = self.outcomeType;
         return newPath;
     }
 
@@ -489,7 +412,7 @@ const WorkflowPath = struct {
             step.debug();
             print(" -> ", .{});
         }
-        print("[{}]\n", .{self.outcomeType.?});
+        print("[accept]\n", .{});
     }
 };
 
@@ -506,48 +429,36 @@ pub fn part2(allocator: std.mem.Allocator, list: std.ArrayList([]const u8)) !usi
     }
 
     var ongoingPath = try WorkflowPath.init(allocator);
-    defer {
-        ongoingPath.deinit();
-    }
+    defer ongoingPath.deinit();
 
     try data.workflows.get("in").?.visitPath(data, &allPaths, ongoingPath);
 
-    // print("\n", .{});
-    // for (allPaths.items) |path| {
-    //     path.debug();
-    // }
-
-    var ongoingList = std.ArrayList(FeatureRange).init(allocator);
-    defer {
-        for (ongoingList.items) |*featureRange| {
-            featureRange.deinit();
-        }
-        ongoingList.deinit();
-    }
-
-    try ongoingList.append(try FeatureRange.init(allocator, Feature.Aerodynamic));
-    try ongoingList.append(try FeatureRange.init(allocator, Feature.ExtremelyCoolLooking));
-    try ongoingList.append(try FeatureRange.init(allocator, Feature.Musical));
-    try ongoingList.append(try FeatureRange.init(allocator, Feature.Shiny));
+    var possibilities: usize = 0;
     for (allPaths.items) |path| {
+        // print("\n", .{});
+        // path.debug();
+        var ongoingList = std.ArrayList(FeatureRange).init(allocator);
+        defer ongoingList.deinit();
+
+        try ongoingList.append(try FeatureRange.init(Feature.Aerodynamic));
+        try ongoingList.append(try FeatureRange.init(Feature.ExtremelyCoolLooking));
+        try ongoingList.append(try FeatureRange.init(Feature.Musical));
+        try ongoingList.append(try FeatureRange.init(Feature.Shiny));
         for (path.path.items) |criteria| {
-            // TODO: check if Rejects can be removed from the allPaths completely
-            if (path.outcomeType == OutcomeType.Accept) {
-                for (ongoingList.items) |*featureRange| {
-                    if (featureRange.feature == criteria.feature) {
-                        try featureRange.filter(criteria.operation.?, criteria.value.?);
-                    }
+            for (ongoingList.items) |*featureRange| {
+                if (featureRange.feature == criteria.feature) {
+                    try featureRange.filter(criteria.operation.?, criteria.value.?);
                 }
             }
         }
+        var pathPossibilities: usize = 1;
+        for (ongoingList.items) |featureRange| {
+            pathPossibilities *= featureRange.range.?.end - featureRange.range.?.start + 1;
+        }
+        // print("Adding {d} possibilities\n", .{pathPossibilities});
+        possibilities += pathPossibilities;
     }
 
-    var possibilities: usize = 1;
-    for (ongoingList.items) |featureRanges| {
-        for (featureRanges.ranges.items) |featureRange| {
-            possibilities *= featureRange.end - featureRange.start + 1;
-        }
-    }
     return possibilities;
 }
 
@@ -633,5 +544,5 @@ test "part 2 full" {
     defer data.deinit();
 
     const testValue: usize = try part2(std.testing.allocator, data.lines);
-    try std.testing.expectEqual(testValue, 0);
+    try std.testing.expectEqual(testValue, 135506683246673);
 }
