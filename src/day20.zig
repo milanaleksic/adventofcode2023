@@ -33,6 +33,7 @@ const Component = struct {
     value: ?bool = null,
     // eligible for Conjuction
     inputs: ?std.StringHashMap(SignalPulse),
+    didSendHighPulse: bool,
 
     pub fn init(component: *Component, allocator: std.mem.Allocator, name: []const u8, componentType: ComponentType) !void {
         component.name = try allocator.dupe(u8, name);
@@ -44,6 +45,7 @@ const Component = struct {
         component.allocator = allocator;
         component.pulsesHigh = 0;
         component.pulsesLow = 0;
+        component.didSendHighPulse = false;
         switch (componentType) {
             ComponentType.FlipFlop => component.value = false,
             ComponentType.Conjuction => component.inputs = std.StringHashMap(SignalPulse).init(allocator),
@@ -139,6 +141,9 @@ const Component = struct {
             .generation = generation + 1,
             .pulse = if (highForAll) SignalPulse.Low else SignalPulse.High,
         };
+        if (effect.pulse == SignalPulse.High) {
+            self.didSendHighPulse = true;
+        }
         try self.effects.append(effect);
     }
 
@@ -151,6 +156,10 @@ const Component = struct {
 
     pub fn str(self: *Self) void {
         print(", type={}", .{self.componentType});
+    }
+
+    pub fn sentHighPulse(self: *Self) bool {
+        return self.didSendHighPulse;
     }
 };
 
@@ -269,33 +278,6 @@ pub fn part1(allocator: std.mem.Allocator, list: std.ArrayList([]const u8)) !usi
     return pulsesHigh * pulsesLow;
 }
 
-test "map operations in zig" {
-    var allocator = std.testing.allocator;
-    var components = std.StringHashMap(*Component).init(allocator);
-    var c = try Component.init(allocator, "123", ComponentType.FlipFlop);
-    c.inputs = std.StringHashMap(SignalPulse).init(allocator);
-    try components.put("123", &c);
-    try components.get("123").?.inputs.?.put("123", SignalPulse.High);
-    try std.testing.expectEqual(components.get("123").?.inputs.?.get("123").?, SignalPulse.High);
-    try components.get("123").?.inputs.?.put("123", SignalPulse.Low);
-    try std.testing.expectEqual(components.get("123").?.inputs.?.get("123").?, SignalPulse.Low);
-    var iter1 = components.iterator();
-    while (iter1.next()) |entry| {
-        print("{s} -> ", .{entry.key_ptr.*});
-        if (entry.value_ptr.*.inputs) |inputsRaw| {
-            print("size of inputs: {d}", .{inputsRaw.count()});
-        }
-        entry.value_ptr.*.str();
-        print("\n", .{});
-    }
-    // cleanup
-    var iter = components.iterator();
-    while (iter.next()) |i| {
-        i.value_ptr.*.deinit();
-    }
-    defer components.deinit();
-}
-
 test "part 1 test 1" {
     var list = try util.parseToListOfStrings([]const u8,
         \\broadcaster -> a, b, c
@@ -333,45 +315,83 @@ test "part 1 full" {
 }
 
 pub fn part2(allocator: std.mem.Allocator, list: std.ArrayList([]const u8)) !usize {
-    var sum: usize = 0;
-
     var data = try Data.init(allocator, list);
     defer data.deinit();
 
-    // access input data...
-    // for (data.rows.items) |rowData| {
+    // just letting it run: even 10Million doesn't cut it; therefore: cycle analysis!
+    // to get the rx to receive a low pulse, the Conjuction "dg" attached to it must get low
+    // to get conjuction to send low, all its inputs must be HIGH
 
-    // }
+    var broadcaster = data.components.get("broadcaster").?;
 
-    return sum;
+    var dg = data.components.get("dg").?;
+    var dgInputsToFollowForHighPulse = std.StringHashMap(usize).init(allocator);
+    defer dgInputsToFollowForHighPulse.deinit();
+    var dgInputNames = dg.inputs.?.keyIterator();
+    while (dgInputNames.next()) |dgInputName| {
+        try dgInputsToFollowForHighPulse.put(dgInputName.*, 0);
+    }
+
+    // sanity value - processing should be done before end is reached
+    for (1..10_000) |i| {
+        var generation: usize = 0;
+        try broadcaster.react(SignalPulse.Low, null, generation);
+        while (true) : (generation += 1) {
+            var valueIter = data.components.valueIterator();
+            while (valueIter.next()) |component| {
+                try component.*.processEffects(generation);
+            }
+            var hasStillSomeEffects = false;
+            valueIter = data.components.valueIterator();
+            while (valueIter.next()) |component| {
+                hasStillSomeEffects = hasStillSomeEffects or (component.*.effects.items.len > 0);
+            }
+            if (!hasStillSomeEffects) {
+                break;
+            }
+
+            // check if any reached HIGH and bail out if all reached HIGH at least once
+            var dgInputIter = dgInputsToFollowForHighPulse.keyIterator();
+            var allNonZero = true;
+            while (dgInputIter.next()) |dgInput| {
+                var cycleValue = dgInputsToFollowForHighPulse.get(dgInput.*).?;
+                var dgInputComponent = data.components.get(dgInput.*).?;
+                if (dgInputComponent.sentHighPulse()) {
+                    if (cycleValue == 0) {
+                        try dgInputsToFollowForHighPulse.put(dgInput.*, i);
+                        cycleValue = i;
+                    }
+                }
+                allNonZero = allNonZero and cycleValue != 0;
+            }
+            if (allNonZero) {
+                // var dgInputIter2 = dgInputsToFollowForHighPulse.iterator();
+                // while (dgInputIter2.next()) |entry| {
+                //     print("cycle: {s} -> {d}\n", .{ entry.key_ptr.*, entry.value_ptr.* });
+                // }
+                return lcm(dgInputsToFollowForHighPulse);
+            }
+        }
+    }
+
+    return 0;
 }
 
-test "part 2 test 1" {
-    var list = try util.parseToListOfStrings([]const u8,
-        \\broadcaster -> a, b, c
-        \\%a -> b
-        \\%b -> c
-        \\%c -> inv
-        \\&inv -> a
-    );
-    defer list.deinit();
+fn lcm(map: std.StringHashMap(usize)) usize {
+    var x: usize = 0;
+    var component = map.valueIterator();
+    while (component.next()) |componentRaw| {
+        var y: u64 = @bitCast(componentRaw.*);
+        if (x == 0) {
+            x = y;
+        } else {
+            // print("LCM of {d} and {d} is ...", .{ x, y });
+            x = @divTrunc(x * y, std.math.gcd(x, y));
+            // print("{d}\n", .{x});
+        }
+    }
 
-    const testValue: usize = try part2(std.testing.allocator, list);
-    try std.testing.expectEqual(testValue, 32000000);
-}
-
-test "part 2 test 2" {
-    var list = try util.parseToListOfStrings([]const u8,
-        \\broadcaster -> a
-        \\%a -> inv, con
-        \\&inv -> b
-        \\%b -> con
-        \\&con -> output
-    );
-    defer list.deinit();
-
-    const testValue: usize = try part2(std.testing.allocator, list);
-    try std.testing.expectEqual(testValue, 11687500);
+    return @bitCast(x);
 }
 
 test "part 2 full" {
@@ -379,5 +399,5 @@ test "part 2 full" {
     defer data.deinit();
 
     const testValue: usize = try part2(std.testing.allocator, data.lines);
-    try std.testing.expectEqual(testValue, 0);
+    try std.testing.expectEqual(testValue, 229215609826339);
 }
