@@ -14,13 +14,20 @@ const ComponentType = enum {
     Broadcast,
 };
 
+const Effect = struct {
+    pulse: SignalPulse,
+    generation: usize,
+};
+
 const Component = struct {
     const Self = @This();
     name: []const u8,
     componentType: ComponentType,
     outputs: std.ArrayList(*Component),
-    effects: std.ArrayList(SignalPulse),
+    effects: std.ArrayList(Effect),
     allocator: std.mem.Allocator,
+    pulsesHigh: usize,
+    pulsesLow: usize,
     // eligible for FlipFlip component type
     value: ?bool = null,
     // eligible for Conjuction
@@ -30,10 +37,12 @@ const Component = struct {
         component.name = try allocator.dupe(u8, name);
         component.componentType = componentType;
         component.outputs = std.ArrayList(*Component).init(allocator);
-        component.effects = std.ArrayList(SignalPulse).init(allocator);
+        component.effects = std.ArrayList(Effect).init(allocator);
         component.value = null;
         component.inputs = null;
         component.allocator = allocator;
+        component.pulsesHigh = 0;
+        component.pulsesLow = 0;
         switch (componentType) {
             ComponentType.FlipFlop => component.value = false,
             ComponentType.Conjuction => component.inputs = std.StringHashMap(SignalPulse).init(allocator),
@@ -61,69 +70,80 @@ const Component = struct {
         self.effects.deinit();
     }
 
-    pub fn react(self: *Self, pulse: SignalPulse, source: ?Component) !void {
-        if (source) |sourceRaw| {
-            print("{s} {}->{s}\n", .{ sourceRaw.name, pulse, self.name });
-        } else {
-            print("button {}->{s}\n", .{ pulse, self.name });
+    pub fn react(self: *Self, pulse: SignalPulse, source: ?Component, generation: usize) !void {
+        switch (pulse) {
+            SignalPulse.Low => self.pulsesLow += 1,
+            SignalPulse.High => self.pulsesHigh += 1,
         }
+        // if (source) |sourceRaw| {
+        //     print("{s} {}->{s}\n", .{ sourceRaw.name, pulse, self.name });
+        // } else {
+        //     print("button {}->{s}\n", .{ pulse, self.name });
+        // }
         try switch (self.componentType) {
-            ComponentType.FlipFlop => self.flipFlop(pulse),
-            ComponentType.Conjuction => self.conjuction(pulse, source.?),
-            ComponentType.Broadcast => self.broadcast(pulse),
+            ComponentType.FlipFlop => self.flipFlop(pulse, generation),
+            ComponentType.Conjuction => self.conjuction(pulse, source.?, generation),
+            ComponentType.Broadcast => self.broadcast(pulse, generation),
         };
     }
 
-    pub fn processEffects(self: *Self) !void {
-        for (self.effects.items) |effect| {
-            try self.runEffect(effect);
-        }
-        self.effects.clearAndFree();
-    }
-
-    fn runEffect(self: *Self, effect: SignalPulse) std.mem.Allocator.Error!void {
-        for (self.outputs.items) |*output| {
-            try output.*.react(effect, self.*);
-        }
-        for (self.outputs.items) |*output| {
-            try output.*.processEffects();
+    pub fn processEffects(self: *Self, generation: usize) !void {
+        //print("running generation {d} on {s}; effects={any}\n", .{ generation, self.name, self.effects.items });
+        for (self.effects.items, 0..) |effect, i| {
+            if (effect.generation <= generation) {
+                try self.runEffect(effect);
+                _ = self.effects.orderedRemove(i);
+            }
         }
     }
 
-    fn flipFlop(self: *Self, pulse: SignalPulse) !void {
+    fn runEffect(self: *Self, effect: Effect) std.mem.Allocator.Error!void {
+        for (self.outputs.items) |*output| {
+            try output.*.react(effect.pulse, self.*, effect.generation + 1);
+        }
+    }
+
+    fn flipFlop(self: *Self, pulse: SignalPulse, generation: usize) !void {
         if (pulse == SignalPulse.High) {
             return;
         }
         self.value = !self.value.?;
-        if (self.value.?) {
-            print("\t{s} is now on; size of effects: {d}\n", .{ self.name, self.effects.items.len });
-        } else {
-            print("\t{s} is now off; size of effects: {d}\n", .{ self.name, self.effects.items.len });
-        }
         // note: value is already inverted, so is thus the logic
-        try self.effects.append(if (self.value.?) SignalPulse.High else SignalPulse.Low);
+        var effect = Effect{
+            .generation = generation + 1,
+            .pulse = if (self.value.?) SignalPulse.High else SignalPulse.Low,
+        };
+        try self.effects.append(effect);
+        // if (self.value.?) {
+        //     print("\t{s} is now on; size of effects: {any}\n", .{ self.name, self.effects.items });
+        // } else {
+        //     print("\t{s} is now off; size of effects: {any}\n", .{ self.name, self.effects.items });
+        // }
     }
 
-    fn conjuction(self: *Self, pulse: SignalPulse, source: Component) !void {
+    fn conjuction(self: *Self, pulse: SignalPulse, source: Component, generation: usize) !void {
         var inputs = self.inputs.?;
         try inputs.put(source.name, pulse);
         var highForAll = true;
         var iter = inputs.iterator();
         while (iter.next()) |entry| {
-            print("\tvalue for input {s} is {}\n", .{ entry.key_ptr.*, entry.value_ptr.* });
+            // print("\tvalue for input {s} is {}\n", .{ entry.key_ptr.*, entry.value_ptr.* });
             if (entry.value_ptr.* == SignalPulse.Low) {
                 highForAll = false;
             }
         }
-        if (highForAll) {
-            try self.effects.append(SignalPulse.Low);
-        } else {
-            try self.effects.append(SignalPulse.High);
-        }
+        var effect = Effect{
+            .generation = generation + 1,
+            .pulse = if (highForAll) SignalPulse.Low else SignalPulse.High,
+        };
+        try self.effects.append(effect);
     }
 
-    fn broadcast(self: *Self, pulse: SignalPulse) !void {
-        try self.effects.append(pulse);
+    fn broadcast(self: *Self, pulse: SignalPulse, generation: usize) !void {
+        try self.effects.append(Effect{
+            .pulse = pulse,
+            .generation = generation + 1,
+        });
     }
 
     pub fn str(self: *Self) void {
@@ -202,19 +222,41 @@ const Data = struct {
     }
 };
 
-pub fn part1(allocator: std.mem.Allocator, list: std.ArrayList([]const u8)) !i64 {
-    var sum: i64 = 0;
-
+pub fn part1(allocator: std.mem.Allocator, list: std.ArrayList([]const u8)) !usize {
     var data = try Data.init(allocator, list);
     defer data.deinit();
 
     // try Data.debug(data.components);
 
     var broadcaster = data.components.get("broadcaster").?;
-    try broadcaster.react(SignalPulse.Low, null);
-    try broadcaster.processEffects();
+    for (0..1000) |_| {
+        var generation: usize = 0;
+        try broadcaster.react(SignalPulse.Low, null, generation);
+        while (true) : (generation += 1) {
+            var valueIter = data.components.valueIterator();
+            while (valueIter.next()) |component| {
+                try component.*.processEffects(generation);
+            }
+            var hasStillSomeEffects = false;
+            valueIter = data.components.valueIterator();
+            while (valueIter.next()) |component| {
+                hasStillSomeEffects = hasStillSomeEffects or (component.*.effects.items.len > 0);
+            }
+            if (!hasStillSomeEffects) {
+                break;
+            }
+        }
+    }
 
-    return sum;
+    var pulsesHigh: usize = 0;
+    var pulsesLow: usize = 0;
+    var valueIter = data.components.valueIterator();
+    while (valueIter.next()) |component| {
+        pulsesHigh += component.*.pulsesHigh;
+        pulsesLow += component.*.pulsesLow;
+    }
+
+    return pulsesHigh * pulsesLow;
 }
 
 test "map operations in zig" {
@@ -254,7 +296,7 @@ test "part 1 test 1" {
     );
     defer list.deinit();
 
-    const testValue: i64 = try part1(std.testing.allocator, list);
+    const testValue: usize = try part1(std.testing.allocator, list);
     try std.testing.expectEqual(testValue, 32000000);
 }
 
@@ -268,7 +310,7 @@ test "part 1 test 2" {
     );
     defer list.deinit();
 
-    const testValue: i64 = try part1(std.testing.allocator, list);
+    const testValue: usize = try part1(std.testing.allocator, list);
     try std.testing.expectEqual(testValue, 11687500);
 }
 
@@ -276,12 +318,12 @@ test "part 1 full" {
     var data = try util.openFile(std.testing.allocator, "data/input-20.txt");
     defer data.deinit();
 
-    const testValue: i64 = try part1(std.testing.allocator, data.lines);
+    const testValue: usize = try part1(std.testing.allocator, data.lines);
     try std.testing.expectEqual(testValue, -1);
 }
 
-pub fn part2(allocator: std.mem.Allocator, list: std.ArrayList([]const u8)) !i64 {
-    var sum: i64 = 0;
+pub fn part2(allocator: std.mem.Allocator, list: std.ArrayList([]const u8)) !usize {
+    var sum: usize = 0;
 
     var data = try Data.init(allocator, list);
     defer data.deinit();
@@ -304,7 +346,7 @@ test "part 2 test 1" {
     );
     defer list.deinit();
 
-    const testValue: i64 = try part2(std.testing.allocator, list);
+    const testValue: usize = try part2(std.testing.allocator, list);
     try std.testing.expectEqual(testValue, 32000000);
 }
 
@@ -318,7 +360,7 @@ test "part 2 test 2" {
     );
     defer list.deinit();
 
-    const testValue: i64 = try part2(std.testing.allocator, list);
+    const testValue: usize = try part2(std.testing.allocator, list);
     try std.testing.expectEqual(testValue, 11687500);
 }
 
@@ -326,6 +368,6 @@ test "part 2 full" {
     var data = try util.openFile(std.testing.allocator, "data/input-20.txt");
     defer data.deinit();
 
-    const testValue: i64 = try part2(std.testing.allocator, data.lines);
+    const testValue: usize = try part2(std.testing.allocator, data.lines);
     try std.testing.expectEqual(testValue, -1);
 }
