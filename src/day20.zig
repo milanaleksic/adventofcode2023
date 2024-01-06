@@ -93,8 +93,10 @@ const Component = struct {
     }
 
     pub fn processEffects(self: *Self, generation: usize) !void {
-        //print("running generation {d} on {s}; effects={any}\n", .{ generation, self.name, self.effects.items });
-        for (self.effects.items, 0..) |effect, i| {
+        var i: usize = self.effects.items.len;
+        while (i > 0) {
+            i -= 1;
+            var effect = self.effects.items[i];
             if (effect.generation <= generation) {
                 try self.runEffect(effect);
                 _ = self.effects.orderedRemove(i);

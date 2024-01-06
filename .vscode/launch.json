@@ -8,9 +8,9 @@
             "request": "launch",
             "program": "${workspaceFolder}/zig-out/bin/adventofcode2023",
             "args": [
-                "2", 
+                "20", 
                 "1",
-                "${workspaceFolder}/data/input-2.txt"
+                "${workspaceFolder}/data/input-20.txt"
             ],
             "cwd": "${workspaceFolder}",
             "preLaunchTask": "build"
