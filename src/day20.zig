@@ -12,6 +12,7 @@ const ComponentType = enum {
     FlipFlop,
     Conjuction,
     Broadcast,
+    Test,
 };
 
 const Effect = struct {
@@ -47,6 +48,7 @@ const Component = struct {
             ComponentType.FlipFlop => component.value = false,
             ComponentType.Conjuction => component.inputs = std.StringHashMap(SignalPulse).init(allocator),
             ComponentType.Broadcast => {},
+            ComponentType.Test => {},
         }
     }
 
@@ -84,6 +86,7 @@ const Component = struct {
             ComponentType.FlipFlop => self.flipFlop(pulse, generation),
             ComponentType.Conjuction => self.conjuction(pulse, source.?, generation),
             ComponentType.Broadcast => self.broadcast(pulse, generation),
+            ComponentType.Test => {},
         };
     }
 
@@ -187,7 +190,7 @@ const Data = struct {
             var inputComponent = components.get(name).?;
             var componentOutputs = std.mem.split(u8, iter.next().?, ", ");
             while (componentOutputs.next()) |output| {
-                var outputComponent = components.get(output).?;
+                var outputComponent = components.get(output) orelse try addTestComponent(allocator, &components, output);
                 try inputComponent.registerOutput(outputComponent);
                 try outputComponent.registerInput(inputComponent);
             }
@@ -196,6 +199,13 @@ const Data = struct {
             .components = components,
             .allocator = allocator,
         };
+    }
+
+    fn addTestComponent(allocator: std.mem.Allocator, components: *std.StringHashMap(*Component), name: []const u8) !*Component {
+        var component = try allocator.create(Component);
+        try component.init(allocator, name, ComponentType.Test);
+        try components.put(name, component);
+        return component;
     }
 
     pub fn deinit(self: *Self) void {
@@ -319,7 +329,7 @@ test "part 1 full" {
     defer data.deinit();
 
     const testValue: usize = try part1(std.testing.allocator, data.lines);
-    try std.testing.expectEqual(testValue, -1);
+    try std.testing.expectEqual(testValue, 866435264);
 }
 
 pub fn part2(allocator: std.mem.Allocator, list: std.ArrayList([]const u8)) !usize {
@@ -369,5 +379,5 @@ test "part 2 full" {
     defer data.deinit();
 
     const testValue: usize = try part2(std.testing.allocator, data.lines);
-    try std.testing.expectEqual(testValue, -1);
+    try std.testing.expectEqual(testValue, 0);
 }
