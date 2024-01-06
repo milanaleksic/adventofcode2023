@@ -97,7 +97,7 @@ const Component = struct {
         while (i > 0) {
             i -= 1;
             var effect = self.effects.items[i];
-            if (effect.generation <= generation) {
+            if (effect.generation == generation) {
                 try self.runEffect(effect);
                 _ = self.effects.orderedRemove(i);
             }
